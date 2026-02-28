@@ -13,13 +13,16 @@ pandas==2.1.4
 
 # LLM & RAG
 langchain==0.1.7
+anthropic>=0.39.0
 
 # Vector Database & Embeddings
 chromadb==0.4.21
 sentence-transformers>=2.2.2
 
-# PDF Parsing
+# PDF Parsing & OCR
 PyMuPDF>=1.23.0
+pytesseract>=0.3.10
+Pillow>=10.0.0
 
 # Data & Processing
 numpy==1.24.3

@@ -21,11 +21,12 @@ class AWSConfig:
 
 
 class MiniMaxConfig:
-    """MiniMax API configuration."""
+    """MiniMax API configuration (Anthropic-compatible endpoint)."""
     MINIMAX_API_KEY = os.getenv("MINIMAX_API_KEY")
     MINIMAX_GROUP_ID = os.getenv("MINIMAX_GROUP_ID")
-    MINIMAX_BASE_URL = os.getenv("MINIMAX_BASE_URL", "https://api.minimaxi.com/v1")
-    MINIMAX_TEXT_MODEL = os.getenv("MINIMAX_TEXT_MODEL", "abab6-advanced")
+    # Anthropic-compatible endpoint for MiniMax text models
+    MINIMAX_BASE_URL = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.io/anthropic")
+    MINIMAX_TEXT_MODEL = os.getenv("MINIMAX_TEXT_MODEL", "MiniMax-M2.5")
     MINIMAX_AUDIO_VOICE = os.getenv("MINIMAX_AUDIO_VOICE", "male-cantonese")
 
 

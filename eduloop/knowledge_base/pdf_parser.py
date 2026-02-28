@@ -44,6 +44,7 @@ class DSEPDFParser:
     def __init__(self):
         """Initialize the PDF parser."""
         self._pymupdf_available = False
+        self._ocr_available = False
         try:
             import pymupdf  # noqa: F401
             self._pymupdf_available = True
@@ -56,6 +57,17 @@ class DSEPDFParser:
                     "⚠️  PyMuPDF not installed. Install with: pip install PyMuPDF\n"
                     "   Without it, only .txt and .md files can be parsed."
                 )
+        # Check for OCR capability (needed for scanned-image PDFs)
+        try:
+            import pytesseract  # noqa: F401
+            from PIL import Image  # noqa: F401
+            self._ocr_available = True
+        except ImportError:
+            print(
+                "⚠️  pytesseract or Pillow not installed. Scanned PDFs will not be parsed.\n"
+                "   Install with: pip install pytesseract Pillow\n"
+                "   Also install Tesseract: brew install tesseract"
+            )
 
     # ------------------------------------------------------------------
     # Public API
@@ -164,7 +176,7 @@ class DSEPDFParser:
     # ------------------------------------------------------------------
 
     def _extract_pdf_text(self, file_path: str) -> str:
-        """Extract text from a PDF using PyMuPDF."""
+        """Extract text from a PDF using PyMuPDF, with OCR fallback for scanned images."""
         if not self._pymupdf_available:
             raise ImportError(
                 "PyMuPDF is required to parse PDFs. "
@@ -178,14 +190,58 @@ class DSEPDFParser:
             import fitz
             doc = fitz.open(file_path)
 
+        # --- Pass 1: try native text extraction ---
         pages_text = []
         for page_num, page in enumerate(doc):
             text = page.get_text("text")
-            if text.strip():
+            # Filter out watermark-only text (e.g. "Scanned by TapScanner")
+            cleaned = re.sub(r"(?i)scanned\s+by\s+\S+", "", text).strip()
+            if cleaned:
                 pages_text.append(f"[Page {page_num + 1}]\n{text}")
-        doc.close()
 
-        return "\n\n".join(pages_text)
+        # If we got meaningful text, return it
+        if pages_text:
+            doc.close()
+            return "\n\n".join(pages_text)
+
+        # --- Pass 2: OCR fallback for scanned-image PDFs ---
+        if not self._ocr_available:
+            doc.close()
+            print(f"   ⚠️  No text layer found and OCR not available. Skipping.")
+            return ""
+
+        import pytesseract
+        from PIL import Image
+        import io
+
+        num_pages = doc.page_count
+        print(f"   🔍 No text layer detected — running OCR ({num_pages} pages)…")
+        ocr_pages = []
+
+        # Build the zoom matrix (works with both pymupdf and fitz namespaces)
+        zoom = 300 / 72  # 72 DPI default → 300 DPI
+        try:
+            import pymupdf as _mu
+            mat = _mu.Matrix(zoom, zoom)
+        except ImportError:
+            import fitz as _mu
+            mat = _mu.Matrix(zoom, zoom)
+
+        for page_num, page in enumerate(doc):
+            pix = page.get_pixmap(matrix=mat)
+            img = Image.open(io.BytesIO(pix.tobytes("png")))
+
+            # Run Tesseract OCR
+            text = pytesseract.image_to_string(img, lang="eng")
+            if text.strip():
+                ocr_pages.append(f"[Page {page_num + 1}]\n{text}")
+
+            if (page_num + 1) % 5 == 0:
+                print(f"      OCR progress: {page_num + 1}/{num_pages} pages")
+
+        doc.close()
+        print(f"   ✅ OCR extracted text from {len(ocr_pages)}/{num_pages} pages")
+        return "\n\n".join(ocr_pages)
 
     # ------------------------------------------------------------------
     # Chunking strategies
