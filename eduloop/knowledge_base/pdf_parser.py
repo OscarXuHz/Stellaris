@@ -26,20 +26,140 @@ class DSEPDFParser:
 
     # DSE Math topic keywords for auto-tagging chunks
     TOPIC_KEYWORDS = {
-        "Quadratic Equations": ["quadratic", "discriminant", "completing the square", "ax²", "roots of equation"],
-        "Functions": ["function", "domain", "range", "composite", "inverse function", "f(x)"],
-        "Geometry": ["triangle", "circle", "polygon", "angle", "congruent", "similar", "area", "perimeter", "pythagoras"],
-        "Trigonometry": ["sin", "cos", "tan", "trigonometric", "radian", "sine rule", "cosine rule"],
-        "Statistics": ["mean", "median", "mode", "standard deviation", "probability", "frequency", "histogram", "box plot"],
-        "Calculus": ["differentiation", "integration", "derivative", "limit", "dy/dx", "d/dx", "integral"],
-        "Probability": ["probability", "expected value", "permutation", "combination", "binomial"],
-        "Binomial Distribution": ["binomial", "bernoulli", "nCr", "binomial expansion"],
-        "Differentiation Application": ["rate of change", "maximum", "minimum", "turning point", "tangent", "normal"],
-        "Matrix Algebra": ["matrix", "determinant", "inverse matrix", "simultaneous", "augmented"],
-        "Vectors": ["vector", "magnitude", "direction", "scalar product", "dot product", "cross product"],
-        "Integration": ["integrate", "definite integral", "area under", "volume of revolution"],
-        "Mathematical Induction": ["induction", "prove by induction", "base case", "inductive step", "P(k)"],
-    }
+    "Quadratic equations in one unknown": [
+        "Factor method",
+        "Form equations from roots",
+        "Graphical solution (x-intercepts)",
+        "Quadratic formula",
+        "Discriminant and nature of roots",
+        "Roots and coefficients relations",
+        "Complex number arithmetic"
+    ],
+    "Functions and graphs": [
+        "Function concepts",
+        "Function representations",
+        "Quadratic graph features",
+        "Max/min by graph",
+        "Algebraic max/min"
+    ],
+    "Exponential and logarithmic functions": [
+        "Rational indices",
+        "Laws of indices",
+        "Logarithm properties",
+        "Exponential/logarithmic graphs",
+        "Solve exponential/logarithmic equations",
+        "Real-life logarithm applications",
+        "Logarithm history"
+    ],
+    "More about polynomials": [
+        "Polynomial long division",
+        "Remainder theorem",
+        "Factor theorem",
+        "GCD and LCM of polynomials",
+        "Rational function operations"
+    ],
+    "More about equations": [
+        "Graphical simultaneous solutions",
+        "Algebraic simultaneous solutions",
+        "Equations transformable to quadratic",
+        "Problem solving"
+    ],
+    "Variations": [
+        "Direct variation",
+        "Inverse variation",
+        "Variation graphs",
+        "Joint and partial variation",
+        "Real-life variation applications"
+    ],
+    "Arithmetic and geometric sequences": [
+        "Arithmetic sequence properties",
+        "Arithmetic general term",
+        "Geometric sequence properties",
+        "Geometric general term",
+        "Sum to n terms",
+        "Sum to infinity",
+        "Real-life sequence problems"
+    ],
+    "Inequalities and linear programming": [
+        "Compound linear inequalities",
+        "Quadratic inequalities graphically",
+        "Quadratic inequalities algebraically",
+        "Graph linear inequalities",
+        "Systems of inequalities",
+        "Linear programming"
+    ],
+    "More about graphs of functions": [
+        "Compare function graphs",
+        "Solve f(x)=k graphically",
+        "Solve inequalities graphically",
+        "Function transformations"
+    ],
+    "Equations of straight lines": [
+        "Line equation from conditions",
+        "Line features",
+        "Line intersections"
+    ],
+    "Basic properties of circles": [
+        "Chord and arc properties",
+        "Angle properties",
+        "Cyclic quadrilateral properties",
+        "Concyclic tests",
+        "Tangent properties",
+        "Alternate segment theorem",
+        "Geometric proofs"
+    ],
+    "Loci": [
+        "Locus concept",
+        "Describe and sketch loci",
+        "Algebraic locus equations"
+    ],
+    "Equations of circles": [
+        "Circle equation from conditions",
+        "Circle features from equation",
+        "Line-circle intersections"
+    ],
+    "More about trigonometry": [
+        "Trigonometric functions",
+        "Basic trigonometric equations",
+        "Advanced trigonometric equations",
+        "Triangle area formula",
+        "Sine and cosine rules",
+        "Heron's formula",
+        "Projection concept",
+        "Line-plane angle",
+        "Three perpendiculars theorem",
+        "2D and 3D problems"
+    ],
+    "Permutations and combinations": [
+        "Counting principles",
+        "Permutation concept",
+        "Combination concept",
+        "Simple permutation problems",
+        "Simple combination problems"
+    ],
+    "More about probability": [
+        "Set language",
+        "Addition law",
+        "Multiplication law",
+        "Conditional probability",
+        "Probability with counting"
+    ],
+    "Measures of dispersion": [
+        "Dispersion concept",
+        "Range and IQR",
+        "Box-and-whisker diagram",
+        "Standard deviation",
+        "Compare dispersions",
+        "Standard score applications",
+        "Effect of operations"
+    ],
+    "Uses and abuses of statistics": [
+        "Sampling techniques",
+        "Questionnaire design",
+        "Statistical method uses",
+        "Evaluate statistical investigations"
+    ]
+}
 
     def __init__(self):
         """Initialize the PDF parser."""
