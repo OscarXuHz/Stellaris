@@ -46,9 +46,13 @@ class DatabaseConfig:
 
 class DSEConfig:
     """HKDSE curriculum and exam configuration."""
-    SUBJECTS = ["Mathematics", "English", "Chinese", "Physics", "Chemistry", "Biology"]
-    PAPER_TYPES = ["Paper 1", "Paper 2", "Paper 3"]
-    LEVELS = ["foundational", "intermediate", "advanced"]
+    SYLLABUSES = ["Math Foundation", "Math I", "Math II"]
+    TOPICS = {
+        "Math Foundation": ["Quadratic Equations", "Functions", "Geometry", "Trigonometry", "Statistics"],
+        "Math I": ["Calculus", "Probability", "Binomial Distribution", "Differentiation Application"],
+        "Math II": ["Matrix Algebra", "Vectors", "Integration", "Mathematical Induction"]
+    }
+    PAPER_TYPES = ["Paper 1", "Paper 2"]
     MAX_MARKS_PER_PAPER = 100
     TOTAL_EXAM_TIME_MINUTES = 150
 

@@ -91,10 +91,10 @@ def dashboard_page():
         st.markdown('</div>', unsafe_allow_html=True)
     
     # Progress radar chart
-    st.subheader("📊 Mastery Progress by Subject")
+    st.subheader("📊 Mastery Progress by Math Syllabus Topic")
     
-    subjects = ["Mathematics", "English", "Physics", "Chemistry"]
-    scores = [78, 82, 65, 71]
+    subjects = ["Algebra", "Geometry", "Trigonometry", "Calculus", "Statistics"]
+    scores = [78, 82, 65, 71, 88]
     
     fig = go.Figure(data=go.Scatterpolar(
         r=scores,
@@ -128,21 +128,28 @@ def learn_page():
     col1, col2 = st.columns([1, 3])
     
     with col1:
-        st.subheader("Select Topic")
-        subject = st.selectbox(
-            "Subject",
-            ["Mathematics", "English", "Physics", "Chemistry", "Biology"]
+        st.subheader("Select Syllabus")
+        syllabus = st.selectbox(
+            "Syllabus",
+            ["Math Foundation", "Math I", "Math II"]
         )
         
-        difficulty = st.radio(
-            "Difficulty Level",
-            ["Foundational", "Intermediate", "Advanced"]
+        # Dynamically change topics based on syllabus
+        topics_map = {
+            "Math Foundation": ["Quadratic Equations", "Functions", "Geometry", "Trigonometry"],
+            "Math I": ["Calculus", "Probability", "Binomial Distribution"],
+            "Math II": ["Matrix Algebra", "Vectors", "System of Linear Equations"]
+        }
+        
+        topic = st.selectbox(
+            "Topic",
+            topics_map[syllabus]
         )
         
         if st.button("📝 Generate Lesson", use_container_width=True):
-            with st.spinner("Creating personalized lesson..."):
-                st.session_state.current_topic = subject
-                st.success(f"Lesson on {subject} ready!")
+            with st.spinner("Retrieving DSE Database and creating personalized lesson..."):
+                st.session_state.current_topic = f"{syllabus} - {topic}"
+                st.success(f"Lesson on {topic} ready!")
     
     with col2:
         if st.session_state.current_topic:
@@ -184,23 +191,30 @@ def practice_page():
     
     with col1:
         st.subheader("Start Assessment")
+        syllabus = st.selectbox(
+            "Syllabus Context",
+            ["Math Foundation", "Math I", "Math II"]
+        )
+        
+        topics_map = {
+            "Math Foundation": ["Quadratic Equations", "Functions", "Geometry", "Trigonometry"],
+            "Math I": ["Calculus", "Probability", "Binomial Distribution"],
+            "Math II": ["Matrix Algebra", "Vectors", "System of Linear Equations"]
+        }
+        
         topic = st.selectbox(
             "Topic",
-            ["Linear Equations", "Polynomials", "Functions", "Trigonometry"]
+            topics_map[syllabus],
+            key="practice_topic"
         )
         
         num_questions = st.slider("Number of Questions", 1, 10, 3)
         
-        difficulty = st.radio(
-            "Difficulty",
-            ["Foundational", "Intermediate", "Advanced"]
-        )
-        
         if st.button("🚀 Start Assessment", use_container_width=True):
             st.session_state.current_assessment = {
                 "topic": topic,
+                "syllabus": syllabus,
                 "num_questions": num_questions,
-                "difficulty": difficulty,
                 "started_at": datetime.now().isoformat()
             }
             st.success("Assessment started! Answer the questions below.")
@@ -208,8 +222,8 @@ def practice_page():
     with col2:
         if "current_assessment" in st.session_state:
             assessment = st.session_state.current_assessment
-            st.subheader(f"Assessment: {assessment['topic']}")
-            st.info(f"{assessment['num_questions']} questions • {assessment['difficulty']} level")
+            st.subheader(f"Assessment: {assessment['topic']} ({assessment['syllabus']})")
+            st.info(f"{assessment['num_questions']} DSE-styled questions retrieved from RAG")
             
             # Display questions
             for i in range(1, assessment["num_questions"] + 1):
