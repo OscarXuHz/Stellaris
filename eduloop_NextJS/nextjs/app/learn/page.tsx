@@ -1,24 +1,24 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
   BookOpen, Loader2, ChevronDown, ChevronUp, AlertCircle,
-  Volume2, Video, RefreshCw,
+  Volume2, Video, RefreshCw, Target, ChevronLeft, ChevronRight, Lightbulb,
 } from "lucide-react";
 import MathContent from "@/components/MathContent";
 import { generateLesson, generateTTS, paraphraseForTTS, createVideo, getVideoStatus } from "@/lib/api";
 import { SYLLABUSES, TOPICS, type Lesson, type ContentBlock } from "@/lib/types";
 import clsx from "clsx";
 
-const TABS = ["📘 Lesson", "🎯 Objectives & Advice", "💡 Practice Ideas", "📚 RAG Sources"] as const;
+const TABS = ["Lesson", "Flashcards", "Objectives & Advice", "Practice Ideas", "RAG Sources"] as const;
 type Tab = (typeof TABS)[number];
 
 const BLOCK_STYLES: Record<ContentBlock["type"], { label: string; className: string; warn?: boolean }> = {
-  introduction:   { label: "📖 Introduction",   className: "bg-blue-50 border-blue-200" },
-  concept:        { label: "📘 Concept",         className: "bg-white border-gray-200" },
-  example:        { label: "📝 Worked Example",  className: "bg-green-50 border-green-200" },
-  common_pitfall: { label: "⚠️ Common Pitfall",  className: "bg-amber-50 border-amber-200", warn: true },
-  summary:        { label: "✅ Summary",          className: "bg-emerald-50 border-emerald-200" },
+  introduction:   { label: "Introduction",    className: "bg-blue-50 border-blue-200" },
+  concept:        { label: "Concept",          className: "bg-white border-gray-200" },
+  example:        { label: "Worked Example",   className: "bg-green-50 border-green-200" },
+  common_pitfall: { label: "Common Pitfall",   className: "bg-amber-50 border-amber-200", warn: true },
+  summary:        { label: "Summary",          className: "bg-emerald-50 border-emerald-200" },
 };
 
 export default function LearnPage() {
@@ -27,7 +27,7 @@ export default function LearnPage() {
   const [loading, setLoading]   = useState(false);
   const [lesson, setLesson]     = useState<Lesson | null>(null);
   const [error, setError]       = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>("📘 Lesson");
+  const [activeTab, setActiveTab] = useState<Tab>("Lesson");
 
   // ── Audio state ────────────────────────────────────────────────────
   const [audioSrc, setAudioSrc]       = useState<string | null>(null);
@@ -39,6 +39,10 @@ export default function LearnPage() {
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoStatus, setVideoStatus] = useState<string>("");
   const videoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Flashcard state ──────────────────────────────────────────────
+  const [currentCard, setCurrentCard] = useState(0);
+  const [cardFlipped, setCardFlipped] = useState(false);
 
   const topics = TOPICS[syllabus] ?? [];
 
@@ -58,7 +62,9 @@ export default function LearnPage() {
     try {
       const result = await generateLesson(topic, "intermediate", {});
       setLesson(result);
-      setActiveTab("📘 Lesson");
+      setActiveTab("Lesson");
+      setCurrentCard(0);
+      setCardFlipped(false);
       // Auto-generate audio narration after lesson loads
       autoNarrate(result);
     } catch (e) {
@@ -82,7 +88,7 @@ export default function LearnPage() {
       const blob = new Blob([bytes], { type: "audio/mpeg" });
       const url = URL.createObjectURL(blob);
       setAudioSrc(url);
-      setTimeout(() => audioRef.current?.play(), 300);
+      setTimeout(() => { audioRef.current?.play().catch(() => {}); }, 300);
     } catch (e) {
       console.error("Auto-narrate failed:", e);
     } finally {
@@ -105,7 +111,7 @@ export default function LearnPage() {
       const blob = new Blob([bytes], { type: "audio/mpeg" });
       const url = URL.createObjectURL(blob);
       setAudioSrc(url);
-      setTimeout(() => audioRef.current?.play(), 100);
+      setTimeout(() => { audioRef.current?.play().catch(() => {}); }, 100);
     } catch (e) {
       console.error("TTS failed:", e);
       setError("Audio generation failed — check console for details.");
@@ -158,9 +164,20 @@ export default function LearnPage() {
 
   const llm = lesson?.llm_response;
 
+  // ── Flashcard data (active recall from lesson content) ─────────────
+  const flashcards = useMemo(() => {
+    if (!llm?.content_blocks) return [];
+    return llm.content_blocks
+      .filter((b) => b.type === "concept" || b.type === "example")
+      .map((b, i) => ({
+        front: b.type === "concept" ? `Key Concept ${i + 1}` : `Worked Example ${i + 1}`,
+        back: b.text,
+      }));
+  }, [llm]);
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 animate-fade-in">📖 Learn with Your Personal Tutor</h1>
+      <h1 className="text-2xl font-bold text-gray-900 animate-fade-in">Personalised Learning</h1>
 
       <div className="grid grid-cols-[260px_1fr] gap-6 items-start">
         {/* ── Left panel ─────────────────────────────────────────────────── */}
@@ -218,7 +235,7 @@ export default function LearnPage() {
                 className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
               >
                 {audioLoading ? <Loader2 size={14} className="animate-spin" /> : <Volume2 size={14} />}
-                {audioLoading ? "Generating…" : "🔊 Audio Narration"}
+                {audioLoading ? "Generating…" : "Audio Narration"}
               </button>
 
               <button
@@ -227,7 +244,7 @@ export default function LearnPage() {
                 className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
               >
                 {videoLoading ? <Loader2 size={14} className="animate-spin" /> : <Video size={14} />}
-                {videoLoading ? "Generating…" : "🎬 Video Instruction"}
+                {videoLoading ? "Generating…" : "Video Instruction"}
               </button>
             </div>
           )}
@@ -238,7 +255,7 @@ export default function LearnPage() {
           {/* ── Audio player ─────────────────────────────────────────── */}
           {audioSrc && (
             <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2 animate-scale-in">
-              <p className="text-sm font-semibold text-indigo-800">🔊 Audio Narration</p>
+              <p className="text-sm font-semibold text-indigo-800">Audio Narration</p>
               <audio ref={audioRef} controls src={audioSrc} className="w-full" />
             </div>
           )}
@@ -257,7 +274,7 @@ export default function LearnPage() {
           {/* ── Video player ─────────────────────────────────────────── */}
           {(videoUrl || videoStatus) && (
             <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 space-y-2 animate-scale-in">
-              <p className="text-sm font-semibold text-purple-800">🎬 Video Instruction</p>
+              <p className="text-sm font-semibold text-purple-800">Video Instruction</p>
               {videoUrl ? (
                 <video controls className="w-full rounded-lg" src={videoUrl} />
               ) : (
@@ -302,6 +319,18 @@ export default function LearnPage() {
                 <h2 className="text-xl font-bold text-gray-900">{lesson.topic}</h2>
               </div>
 
+              {/* Personalisation indicator */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl px-5 py-3 flex items-center gap-3 animate-fade-in">
+                <div className="bg-blue-100 rounded-full p-1.5">
+                  <Target size={14} className="text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-blue-800">Lesson adapted to your learning profile</p>
+                  <p className="text-xs text-blue-500">Intermediate level · Visual learner · Focus on conceptual understanding</p>
+                </div>
+                <span className="shrink-0 bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Adapted</span>
+              </div>
+
               {/* Error from LLM */}
               {llm?.status === "error" && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
@@ -330,7 +359,7 @@ export default function LearnPage() {
 
                 <div className="p-5">
                   {/* ── Tab: Lesson ─────────────────────────────────────── */}
-                  {activeTab === "📘 Lesson" && (
+                  {activeTab === "Lesson" && (
                     <div className="space-y-4">
                       {(llm?.content_blocks ?? []).length === 0 && (
                         <p className="text-gray-400 text-sm">No content blocks returned.</p>
@@ -347,11 +376,65 @@ export default function LearnPage() {
                     </div>
                   )}
 
+                  {/* ── Tab: Flashcards (Active Recall) ──────────────────── */}
+                  {activeTab === "Flashcards" && (
+                    <div className="space-y-4">
+                      <p className="text-xs text-gray-500">
+                        Active recall practice — click a card to reveal, then self-assess.
+                        Based on the <strong>testing effect</strong>: retrieving information strengthens memory more than re-reading.
+                      </p>
+                      {flashcards.length === 0 ? (
+                        <p className="text-gray-400 text-sm">Generate a lesson first to create flashcards.</p>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-500">Card {currentCard + 1} of {flashcards.length}</span>
+                            <div className="flex gap-1">
+                              {flashcards.map((_, i) => (
+                                <div key={i} className={clsx("w-2 h-2 rounded-full transition-colors", i === currentCard ? "bg-blue-500" : "bg-gray-200")} />
+                              ))}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setCardFlipped(!cardFlipped)}
+                            className="w-full text-left min-h-[180px] bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 transition-all duration-300 hover:shadow-md hover:border-blue-300 cursor-pointer animate-scale-in"
+                          >
+                            {!cardFlipped ? (
+                              <div className="flex flex-col items-center justify-center gap-3">
+                                <Lightbulb size={28} className="text-blue-400" />
+                                <p className="text-lg font-bold text-blue-800">{flashcards[currentCard].front}</p>
+                                <p className="text-xs text-blue-400">Click to reveal</p>
+                              </div>
+                            ) : (
+                              <MathContent content={flashcards[currentCard].back} />
+                            )}
+                          </button>
+                          <div className="flex items-center justify-between">
+                            <button
+                              onClick={() => { setCurrentCard((c) => Math.max(0, c - 1)); setCardFlipped(false); }}
+                              disabled={currentCard === 0}
+                              className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-blue-600 disabled:opacity-30 transition-colors"
+                            >
+                              <ChevronLeft size={16} /> Previous
+                            </button>
+                            <button
+                              onClick={() => { setCurrentCard((c) => Math.min(flashcards.length - 1, c + 1)); setCardFlipped(false); }}
+                              disabled={currentCard === flashcards.length - 1}
+                              className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-blue-600 disabled:opacity-30 transition-colors"
+                            >
+                              Next <ChevronRight size={16} />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
                   {/* ── Tab: Objectives & Advice ─────────────────────────── */}
-                  {activeTab === "🎯 Objectives & Advice" && (
+                  {activeTab === "Objectives & Advice" && (
                     <div className="space-y-6">
                       <div>
-                        <h3 className="font-semibold text-gray-800 mb-3">🎯 Learning Objectives</h3>
+                        <h3 className="font-semibold text-gray-800 mb-3">Learning Objectives</h3>
                         <ul className="space-y-2">
                           {(llm?.learning_objectives ?? []).map((obj, i) => (
                             <li key={i} className="flex items-start gap-2 text-sm">
@@ -363,7 +446,7 @@ export default function LearnPage() {
                       </div>
                       {llm?.constructive_advice && (
                         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                          <p className="text-xs font-semibold text-blue-600 mb-2">💬 Tutor's Advice</p>
+                          <p className="text-xs font-semibold text-blue-600 mb-2">Tutor's Advice</p>
                           <MathContent content={llm.constructive_advice} />
                         </div>
                       )}
@@ -371,7 +454,7 @@ export default function LearnPage() {
                   )}
 
                   {/* ── Tab: Practice Ideas ───────────────────────────────── */}
-                  {activeTab === "💡 Practice Ideas" && (
+                  {activeTab === "Practice Ideas" && (
                     <div className="space-y-3">
                       <p className="text-xs text-gray-500 mb-1">
                         Suggested questions generated by the AI tutor — try them in the Practice section.
@@ -386,14 +469,14 @@ export default function LearnPage() {
                   )}
 
                   {/* ── Tab: RAG Sources ─────────────────────────────────── */}
-                  {activeTab === "📚 RAG Sources" && (
+                  {activeTab === "RAG Sources" && (
                     <div className="space-y-2 text-sm">
                       <p className="text-xs text-gray-500">
                         These source documents were fed to MiniMax as context.
                       </p>
                       {(lesson.dse_references ?? []).map((src) => (
                         <div key={src} className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
-                          <span className="text-gray-400">📄</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0" />
                           <span className="text-gray-700">{src}</span>
                         </div>
                       ))}

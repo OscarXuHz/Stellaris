@@ -41,7 +41,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-lg">
-      <h1 className="text-2xl font-bold text-gray-900">⚙️ Settings</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
 
       <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
         <h2 className="font-semibold text-gray-700">Student Profile</h2>

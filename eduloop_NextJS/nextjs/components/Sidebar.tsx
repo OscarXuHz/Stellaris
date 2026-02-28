@@ -10,6 +10,8 @@ import {
   Settings,
   GraduationCap,
   MessageCircle,
+  Shield,
+  Bot,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -18,8 +20,9 @@ const NAV = [
   { href: "/learn",    label: "Learn",     icon: BookOpen },
   { href: "/practice", label: "Practice",  icon: PenLine },
   { href: "/chat",     label: "Chat",      icon: MessageCircle },
-  { href: "/progress", label: "Progress",  icon: BarChart2 },
-  { href: "/settings", label: "Settings",  icon: Settings },
+  { href: "/progress",   label: "Progress",   icon: BarChart2 },
+  { href: "/evaluation", label: "Evaluation", icon: Shield },
+  { href: "/settings",   label: "Settings",   icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -62,8 +65,16 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-5 py-4 border-t border-gray-200">
-        <p className="text-[11px] text-gray-400">Powered by MiniMax AI + RAG</p>
+      <div className="px-5 py-4 border-t border-gray-200 space-y-2">
+        <div className="flex items-center gap-2">
+          <Bot size={13} className="text-blue-500" />
+          <p className="text-[10px] text-gray-500 font-medium">2 AI Agents Active</p>
+        </div>
+        <div className="flex gap-1">
+          <span className="text-[9px] bg-green-50 text-green-600 font-semibold px-1.5 py-0.5 rounded">Teaching</span>
+          <span className="text-[9px] bg-purple-50 text-purple-600 font-semibold px-1.5 py-0.5 rounded">Assessment</span>
+        </div>
+        <p className="text-[10px] text-gray-400">Powered by MiniMax AI + RAG</p>
       </div>
     </aside>
   );

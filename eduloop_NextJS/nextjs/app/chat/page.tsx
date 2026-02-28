@@ -8,10 +8,10 @@ import { SYLLABUSES, TOPICS, type ChatMessage } from "@/lib/types";
 import clsx from "clsx";
 
 const AGENT_STYLES: Record<string, { label: string; color: string; bg: string }> = {
-  orchestrator: { label: "🤖 Orchestrator",  color: "text-blue-700",   bg: "bg-blue-50 border-blue-200" },
-  teaching:     { label: "📘 Teaching Agent", color: "text-green-700",  bg: "bg-green-50 border-green-200" },
-  assessment:   { label: "📊 Assessment Agent", color: "text-purple-700", bg: "bg-purple-50 border-purple-200" },
-  error:        { label: "⚠️ Error",          color: "text-red-700",    bg: "bg-red-50 border-red-200" },
+  orchestrator: { label: "Orchestrator",  color: "text-blue-700",   bg: "bg-blue-50 border-blue-200" },
+  teaching:     { label: "Teaching Agent", color: "text-green-700",  bg: "bg-green-50 border-green-200" },
+  assessment:   { label: "Assessment Agent", color: "text-purple-700", bg: "bg-purple-50 border-purple-200" },
+  error:        { label: "Error",          color: "text-red-700",    bg: "bg-red-50 border-red-200" },
 };
 
 export default function ChatPage() {
@@ -71,7 +71,7 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)]">
       <h1 className="text-2xl font-bold text-gray-900 mb-4 shrink-0">
-        💬 Chat with the Orchestrator
+        Chat with the Orchestrator
       </h1>
 
       <div className="grid grid-cols-[240px_1fr] gap-6 flex-1 min-h-0">

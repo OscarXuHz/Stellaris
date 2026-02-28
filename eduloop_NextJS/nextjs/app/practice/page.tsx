@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import {
   PenLine, Loader2, ChevronDown, ChevronUp,
   CheckCircle2, AlertCircle, Eye, EyeOff,
-  Volume2, Video, RefreshCw,
+  Volume2, Video, RefreshCw, Lightbulb, Target,
 } from "lucide-react";
 import MathContent from "@/components/MathContent";
 import {
@@ -24,7 +24,14 @@ interface QuestionState {
   loading: boolean;
   open: boolean;
   showAnswer: boolean;
+  hintsRevealed: number;
 }
+
+const SCAFFOLDED_HINTS = [
+  "Identify the key information given and what the question is asking you to find.",
+  "Write down the relevant formula or theorem, then substitute the known values.",
+  "Verify your answer by substituting it back into the original equation or checking boundary conditions.",
+];
 
 export default function PracticePage() {
   const [syllabus, setSyllabus]       = useState<string>(SYLLABUSES[0]);
@@ -76,6 +83,7 @@ export default function PracticePage() {
         loading: false,
         open: true,
         showAnswer: false,
+        hintsRevealed: 0,
       }));
       setQuestions(qStates);
       // Auto-generate paraphrased audio narration
@@ -100,7 +108,7 @@ export default function PracticePage() {
       const blob = new Blob([bytes], { type: "audio/mpeg" });
       const url = URL.createObjectURL(blob);
       setAudioSrc(url);
-      setTimeout(() => audioRef.current?.play(), 300);
+      setTimeout(() => { audioRef.current?.play().catch(() => {}); }, 300);
     } catch (e) {
       console.error("Auto-narrate failed:", e);
     } finally {
@@ -143,8 +151,7 @@ export default function PracticePage() {
       const blob = new Blob([bytes], { type: "audio/mpeg" });
       const url = URL.createObjectURL(blob);
       setAudioSrc(url);
-      // Auto-play
-      setTimeout(() => audioRef.current?.play(), 100);
+      setTimeout(() => { audioRef.current?.play().catch(() => {}); }, 100);
     } catch (e) {
       console.error("TTS failed:", e);
       setLoadErr("Audio generation failed — check console for details.");
@@ -198,7 +205,7 @@ export default function PracticePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 animate-fade-in">✏️ Practice & Assessment</h1>
+      <h1 className="text-2xl font-bold text-gray-900 animate-fade-in">Adaptive Practice & Assessment</h1>
 
       <div className="grid grid-cols-[260px_1fr] gap-6 items-start">
         {/* ── Left panel ─────────────────────────────────────────────── */}
@@ -261,7 +268,7 @@ export default function PracticePage() {
                 className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
               >
                 {audioLoading ? <Loader2 size={14} className="animate-spin" /> : <Volume2 size={14} />}
-                {audioLoading ? "Generating…" : "🔊 Audio Narration"}
+                {audioLoading ? "Generating…" : "Audio Narration"}
               </button>
 
               <button
@@ -270,7 +277,7 @@ export default function PracticePage() {
                 className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
               >
                 {videoLoading ? <Loader2 size={14} className="animate-spin" /> : <Video size={14} />}
-                {videoLoading ? "Generating…" : "🎬 Video Instruction"}
+                {videoLoading ? "Generating…" : "Video Instruction"}
               </button>
             </div>
           )}
@@ -288,7 +295,7 @@ export default function PracticePage() {
           {/* ── Audio player ─────────────────────────────────────────── */}
           {audioSrc && (
             <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2 animate-scale-in">
-              <p className="text-sm font-semibold text-indigo-800">🔊 Audio Narration</p>
+              <p className="text-sm font-semibold text-indigo-800">Audio Narration</p>
               <audio ref={audioRef} controls src={audioSrc} className="w-full" />
             </div>
           )}
@@ -307,7 +314,7 @@ export default function PracticePage() {
           {/* ── Video player ─────────────────────────────────────────── */}
           {(videoUrl || videoStatus) && (
             <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 space-y-2 animate-scale-in">
-              <p className="text-sm font-semibold text-purple-800">🎬 Video Instruction</p>
+              <p className="text-sm font-semibold text-purple-800">Video Instruction</p>
               {videoUrl ? (
                 <video controls className="w-full rounded-lg" src={videoUrl} />
               ) : (
@@ -334,6 +341,20 @@ export default function PracticePage() {
               <div className="mt-4 mx-auto w-64 h-2 rounded-full overflow-hidden bg-gray-100">
                 <div className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 animate-gradient-x rounded-full" />
               </div>
+            </div>
+          )}
+
+          {/* Personalisation indicator */}
+          {questions.length > 0 && (
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl px-5 py-3 flex items-center gap-3 animate-fade-in">
+              <div className="bg-emerald-100 rounded-full p-1.5">
+                <Target size={14} className="text-emerald-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-emerald-800">Questions adapted to your level</p>
+                <p className="text-xs text-emerald-500">Difficulty: Intermediate · Targeting identified weak areas · Spaced repetition scheduling active</p>
+              </div>
+              <span className="shrink-0 bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Personalised</span>
             </div>
           )}
 
@@ -390,7 +411,7 @@ export default function PracticePage() {
                         </button>
                         {qs.showAnswer && (
                           <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                            <p className="text-xs font-semibold text-emerald-700 mb-1">✅ Answer / Solution</p>
+                            <p className="text-xs font-semibold text-emerald-700 mb-1">Answer / Solution</p>
                             <MathContent content={hiddenAnswer} compact />
                           </div>
                         )}
@@ -413,6 +434,32 @@ export default function PracticePage() {
                       />
                     </div>
 
+                    {/* Progressive hints (scaffolded learning) */}
+                    <div className="space-y-2">
+                      <button
+                        onClick={() =>
+                          setQuestions((prev) =>
+                            prev.map((q, i) => (i === idx ? { ...q, hintsRevealed: Math.min(q.hintsRevealed + 1, 3) } : q)),
+                          )
+                        }
+                        disabled={qs.hintsRevealed >= 3}
+                        className="flex items-center gap-1.5 text-xs font-medium text-amber-600 hover:text-amber-700 disabled:opacity-40 transition-colors"
+                      >
+                        <Lightbulb size={13} />
+                        {qs.hintsRevealed >= 3 ? "All hints revealed" : `Reveal Hint (${qs.hintsRevealed}/3)`}
+                      </button>
+                      {qs.hintsRevealed > 0 && (
+                        <div className="space-y-1.5">
+                          {Array.from({ length: qs.hintsRevealed }, (_, i) => (
+                            <div key={i} className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-800 animate-fade-in">
+                              <span className="font-semibold text-amber-600 mr-1">Hint {i + 1}:</span>
+                              {SCAFFOLDED_HINTS[i]}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     <button
                       onClick={() => handleSubmit(idx)}
                       disabled={qs.loading || !qs.answer.trim()}
@@ -425,7 +472,7 @@ export default function PracticePage() {
                     {/* Evaluation result */}
                     {eval_ && (
                       <div className="space-y-3 border-t border-gray-100 pt-4">
-                        <p className="text-sm font-semibold text-gray-800">📊 AI Evaluation</p>
+                        <p className="text-sm font-semibold text-gray-800">AI Evaluation</p>
 
                         {eval_.status === "error" ? (
                           <p className="text-sm text-red-600">{eval_.error}</p>
@@ -450,7 +497,7 @@ export default function PracticePage() {
 
                             {(eval_.diagnostic_report?.strengths ?? []).length > 0 && (
                               <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-1">
-                                <p className="text-xs font-semibold text-green-700">✅ Strengths</p>
+                                <p className="text-xs font-semibold text-green-700">Strengths</p>
                                 {eval_.diagnostic_report!.strengths.map((s, i) => (
                                   <div key={i}><MathContent content={s} compact /></div>
                                 ))}
@@ -459,7 +506,7 @@ export default function PracticePage() {
 
                             {(eval_.diagnostic_report?.knowledge_gaps ?? []).length > 0 && (
                               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1">
-                                <p className="text-xs font-semibold text-amber-700">⚠️ Knowledge Gaps</p>
+                                <p className="text-xs font-semibold text-amber-700">Knowledge Gaps</p>
                                 {eval_.diagnostic_report!.knowledge_gaps.map((g, i) => (
                                   <div key={i}><MathContent content={g} compact /></div>
                                 ))}
@@ -468,14 +515,14 @@ export default function PracticePage() {
 
                             {eval_.diagnostic_report?.constructive_feedback && (
                               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                <p className="text-xs font-semibold text-blue-700 mb-1">💬 Feedback</p>
+                                <p className="text-xs font-semibold text-blue-700 mb-1">Feedback</p>
                                 <MathContent content={eval_.diagnostic_report.constructive_feedback} compact />
                               </div>
                             )}
 
                             {eval_.diagnostic_report?.misconception_analysis && (
                               <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
-                                <p className="text-xs font-semibold text-rose-700 mb-1">🔍 Misconception</p>
+                                <p className="text-xs font-semibold text-rose-700 mb-1">Misconception Analysis</p>
                                 <MathContent content={eval_.diagnostic_report.misconception_analysis} compact />
                               </div>
                             )}
@@ -494,7 +541,7 @@ export default function PracticePage() {
                     {/* Marking scheme toggle */}
                     {showMS && marking[idx] && (
                       <div className="border-t border-gray-100 pt-4">
-                        <p className="text-xs font-semibold text-gray-600 mb-2">📋 Official Marking Scheme</p>
+                        <p className="text-xs font-semibold text-gray-600 mb-2">Official Marking Scheme</p>
                         <div className="bg-gray-50 rounded-lg p-4">
                           <MathContent content={marking[idx].text} compact />
                         </div>

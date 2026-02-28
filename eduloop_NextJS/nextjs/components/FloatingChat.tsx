@@ -145,7 +145,7 @@ export default function FloatingChat({ topic = "" }: FloatingChatProps) {
             {messages.length === 0 && (
               <div className="text-center text-gray-400 mt-8 space-y-2">
                 <Bot size={32} className="mx-auto opacity-30" />
-                <p className="text-sm">Hi! 👋 I&apos;m your AI study assistant.</p>
+                <p className="text-sm">Hi! I&apos;m your AI study assistant.</p>
                 <p className="text-xs text-gray-300">
                   Ask about a concept, or paste a question you&apos;re stuck on.
                 </p>
