@@ -310,9 +310,9 @@ streamlit run frontend/app.py
 
 | Role | Responsibility | Core Tools |
 |------|---------------|------------|
-| **Member A** — System Architect | AWS Bedrock AgentCore orchestration, agent handshake protocol, session state management | AWS Bedrock, Boto3, Python |
-| **Member B** — Teaching Specialist | MiniMax API integration, multi-modal output, DSE knowledge RAG, audio generation | MiniMax API, Python |
-| **Member C** — Assessment & UI | Assessment logic, auto-scoring (DSE Marking Scheme), Streamlit frontend, visualization | Streamlit, Plotly, Python |
+| **LIU Jiawei** — System Architect | AWS Bedrock AgentCore orchestration, agent handshake protocol, session state management | AWS Bedrock, Boto3, Python |
+| **So Cheuk Ki** — Teaching Specialist | MiniMax API integration, multi-modal output, DSE knowledge RAG, audio generation | MiniMax API, Python |
+| **XU Jiahang** — Assessment & UI | Assessment logic, auto-scoring (DSE Marking Scheme), Streamlit frontend, visualization | Streamlit, Plotly, Python |
 
 ---
 
@@ -361,5 +361,6 @@ Because every agent runs as an **independent AWS Bedrock AgentCore Runtime**, we
 
 > **Bottom line:** Separate agents = sharper focus, lower cost, easier iteration.
 ## License
+
 
 MIT License — Built with ❤️ in Hong Kong for HKDSE students everywhere.
