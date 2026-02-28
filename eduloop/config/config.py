@@ -39,9 +39,12 @@ class StreamlitConfig:
 
 class DatabaseConfig:
     """Database and persistence configuration."""
-    VECTOR_DB_TYPE = os.getenv("VECTOR_DB_TYPE", "chroma")  # chroma, pinecone, etc.
+    VECTOR_DB_TYPE = os.getenv("VECTOR_DB_TYPE", "chroma")
     VECTOR_DB_PATH = os.getenv("VECTOR_DB_PATH", "./data/vector_db")
     SESSION_DB_PATH = os.getenv("SESSION_DB_PATH", "./data/sessions")
+    KNOWLEDGE_BASE_DIR = os.getenv("KNOWLEDGE_BASE_DIR", "./knowledge_base")
+    CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "dse_math")
+    EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 
 
 class DSEConfig:
