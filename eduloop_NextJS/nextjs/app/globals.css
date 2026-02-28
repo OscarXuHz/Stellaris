@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* KaTeX stylesheet — enables LaTeX rendering everywhere */
+@import "katex/dist/katex.min.css";
+
+@layer base {
+  html { @apply antialiased; }
+  body { @apply bg-gray-50 text-gray-900; }
+}
+
+/* Prose overrides so math blocks don't overflow */
+.prose .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
