@@ -2,12 +2,18 @@
 
 import pytest
 from agents.teaching_agent import TeachingAgent
+from config.config import Config
 
 
 @pytest.fixture
 def teaching_agent():
     """Create a TeachingAgent instance for testing."""
-    return TeachingAgent("test_key", rag_vectordb=None)
+    cfg = Config()
+    # dummy retriever with required method signature
+    retriever = type('R', (object,), {
+        'get_relevant_chunks': lambda self, query, subject, top_k: []
+    })()
+    return TeachingAgent(cfg, retriever)
 
 
 def test_lesson_generation(teaching_agent):
@@ -19,18 +25,15 @@ def test_lesson_generation(teaching_agent):
     }
     
     # Mock RAG retrieval
-    mock_curriculum = [
-        {"source": "DSE Curriculum", "content": "Lesson content here"}
-    ]
-    
-    # Temporarily set mock materials
-    teaching_agent.rag_vectordb = type('obj', (object,), {
-        'retrieve': lambda topic, k: mock_curriculum
+    mock_curriculum = [{"source": "DSE Curriculum", "content": "Lesson content here"}]
+    teaching_agent.retriever = type('obj', (object,), {
+        'get_relevant_chunks': lambda self, query, subject, top_k: mock_curriculum
     })()
     
     lesson = teaching_agent.generate_lesson(
         topic="Linear Equations",
         level="intermediate",
+        subject="Math Foundation",
         student_profile=student_profile
     )
     
@@ -81,11 +84,29 @@ def test_lesson_history(teaching_agent):
     assert len(teaching_agent.get_lesson_history()) == 0
     
     # Generate mock lesson
-    mock_lesson = {
-        "lesson_id": "test_123",
-        "topic": "Test Topic"
-    }
-    teaching_agent.session_lessons.append(mock_lesson)
+    mock_lesson = {"lesson_id": "test_123", "topic": "Test Topic"}
+    teaching_agent.lesson_history.append(mock_lesson)
     
     assert len(teaching_agent.get_lesson_history()) == 1
     assert teaching_agent.get_lesson_history()[0]["lesson_id"] == "test_123"
+
+
+def test_minimax_llm_call(teaching_agent, monkeypatch):
+    """Ensure LLM helper returns expected text when API is mocked."""
+    class DummyResp:
+        def __init__(self, data):
+            self._data = data
+            self.status_code = 200
+        def raise_for_status(self):
+            pass
+        def json(self):
+            return self._data
+    
+    def fake_post(url, json, headers, timeout):
+        # record url and payload for assertions
+        assert url == teaching_agent.minimax_llm_url
+        return DummyResp({"output": "{\"objectives\": []}"})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    result = teaching_agent._call_minimax_llm("dummy prompt")
+    assert "objectives" in result
