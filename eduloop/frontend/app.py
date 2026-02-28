@@ -49,6 +49,11 @@ st.markdown("""
         border-radius: 8px;
         margin: 10px 0;
     }
+    /* Ensure LaTeX blocks render with proper spacing */
+    .katex-display {
+        margin: 1em 0 !important;
+        overflow-x: auto;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -320,18 +325,31 @@ def practice_page():
             if not paper_results:
                 paper_results = retriever.retrieve(topic, k=num_questions)
 
+            raw_questions = paper_results[:num_questions]
+
+            # ── Reformat raw OCR question text with LaTeX via MiniMax ──
+            agent: TeachingAgent = st.session_state.teaching_agent
+            with st.spinner("Formatting questions with LaTeX via MiniMax…"):
+                formatted_questions = []
+                for q in raw_questions:
+                    q_copy = dict(q)
+                    q_copy["text"] = agent.format_question_latex(
+                        q.get("text", ""), topic
+                    )
+                    formatted_questions.append(q_copy)
+
             st.session_state.current_assessment = {
                 "topic": topic,
                 "syllabus": syllabus,
                 "num_questions": num_questions,
                 "started_at": datetime.now().isoformat(),
-                "questions": paper_results[:num_questions],
+                "questions": formatted_questions,
                 "marking": marking_results[:num_questions],
             }
             # Clear previous evaluations
             st.session_state.pop("evaluation_results", None)
             st.success(
-                f"Assessment ready! {len(paper_results[:num_questions])} real DSE questions loaded."
+                f"Assessment ready! {len(formatted_questions)} questions loaded & formatted with LaTeX."
             )
 
         # API key indicator
