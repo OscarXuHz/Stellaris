@@ -1,1 +1,4 @@
-eduloop/.env
+eduloop/.enveduloop_NextJS/nextjs/.next/
+eduloop_NextJS/nextjs/node_modules/
+*.pack
+*.node
