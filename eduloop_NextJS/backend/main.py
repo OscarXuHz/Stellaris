@@ -28,8 +28,9 @@ from typing import Any
 from agents.teaching_agent import TeachingAgent
 from agents.assessment_agent import AssessmentAgent
 from agents.orchestrator_agent import OrchestratorAgent
+from core.bedrock_orchestrator import BedrockOrchestrator
 from knowledge_base.rag_retriever import DSERetriever
-from config.config import DatabaseConfig, MiniMaxConfig
+from config.config import DatabaseConfig, MiniMaxConfig, AWSConfig
 
 # ── App ────────────────────────────────────────────────────────────────
 app = FastAPI(title="EduLoop API", version="1.0.0")
@@ -48,11 +49,12 @@ rag: DSERetriever | None = None
 teaching_agent: TeachingAgent | None = None
 assessment_agent: AssessmentAgent | None = None
 orchestrator_agent: OrchestratorAgent | None = None
+bedrock_orchestrator: BedrockOrchestrator | None = None
 
 
 @app.on_event("startup")
 async def startup() -> None:
-    global rag, teaching_agent, assessment_agent, orchestrator_agent
+    global rag, teaching_agent, assessment_agent, orchestrator_agent, bedrock_orchestrator
 
     import os
     os.environ.setdefault("HF_HUB_OFFLINE", "1")          # Skip HF network check
@@ -66,12 +68,31 @@ async def startup() -> None:
     api_key = MiniMaxConfig.MINIMAX_API_KEY or ""
     teaching_agent  = TeachingAgent(minimax_api_key=api_key, rag_vectordb=rag)
     assessment_agent = AssessmentAgent(minimax_api_key=api_key, rag_vectordb=rag)
+
+    # ── AWS Bedrock AgentCore (orchestration layer) ──────────────────
+    bedrock_enabled = os.getenv("AWS_BEDROCK_ENABLED", "false").lower() == "true"
+    if bedrock_enabled:
+        try:
+            bedrock_orchestrator = BedrockOrchestrator(
+                region=AWSConfig.AWS_REGION,
+                model_id=AWSConfig.BEDROCK_MODEL_ID,
+                teaching_agent=teaching_agent,
+                assessment_agent=assessment_agent,
+            )
+            print(f"✅  AWS Bedrock AgentCore initialised — region={AWSConfig.AWS_REGION} model={AWSConfig.BEDROCK_MODEL_ID}")
+        except Exception as e:
+            print(f"⚠️  AWS Bedrock init failed (non-fatal, will use MiniMax fallback): {e}")
+            bedrock_orchestrator = None
+    else:
+        print("ℹ️  AWS Bedrock disabled (set AWS_BEDROCK_ENABLED=true to enable)")
+
     orchestrator_agent = OrchestratorAgent(
         minimax_api_key=api_key,
         teaching_agent=teaching_agent,
         assessment_agent=assessment_agent,
+        bedrock_orchestrator=bedrock_orchestrator,
     )
-    print(f"✅  EduLoop API ready — MiniMax key {'SET' if api_key else 'NOT SET'}")
+    print(f"✅  EduLoop API ready — MiniMax key {'SET' if api_key else 'NOT SET'}, Bedrock {'ENABLED' if bedrock_enabled else 'DISABLED'}")
 
 
 # ── Request models ─────────────────────────────────────────────────────
@@ -204,7 +225,12 @@ def assess(req: AssessRequest):
 
 @app.post("/api/chat")
 def chat(req: ChatRequest):
-    """Chat with the Orchestrator, which coordinates Teaching + Assessment agents."""
+    """Chat with the Orchestrator, which coordinates Teaching + Assessment agents.
+
+    When AWS Bedrock is enabled, the orchestrator uses Bedrock AgentCore for
+    intent classification and session-aware routing. Otherwise falls back
+    to MiniMax-M2.5 for routing decisions.
+    """
     if orchestrator_agent is None:
         raise HTTPException(503, "Agents not yet initialised")
     try:
@@ -217,6 +243,41 @@ def chat(req: ChatRequest):
         return result
     except Exception as e:
         raise HTTPException(500, str(e))
+
+
+# ── Bedrock-specific endpoints ─────────────────────────────────────────
+
+@app.get("/api/bedrock/status")
+def bedrock_status():
+    """Check the status of the AWS Bedrock AgentCore integration."""
+    import os
+    enabled = os.getenv("AWS_BEDROCK_ENABLED", "false").lower() == "true"
+    return {
+        "enabled": enabled,
+        "available": bedrock_orchestrator is not None and bedrock_orchestrator.is_available,
+        "region": AWSConfig.AWS_REGION,
+        "model_id": AWSConfig.BEDROCK_MODEL_ID,
+        "active_sessions": len(bedrock_orchestrator.list_sessions()) if bedrock_orchestrator else 0,
+    }
+
+
+@app.get("/api/bedrock/sessions")
+def bedrock_sessions():
+    """List all active Bedrock learning loop sessions."""
+    if bedrock_orchestrator is None:
+        return {"sessions": [], "message": "Bedrock not enabled"}
+    return {"sessions": bedrock_orchestrator.list_sessions()}
+
+
+@app.get("/api/bedrock/session/{session_id}")
+def bedrock_session_report(session_id: str):
+    """Get a detailed report for a specific learning loop session."""
+    if bedrock_orchestrator is None:
+        raise HTTPException(503, "Bedrock not enabled")
+    report = bedrock_orchestrator.get_session_report(session_id)
+    if "error" in report:
+        raise HTTPException(404, report["error"])
+    return report
 
 
 # ── Paraphrase endpoint (for natural-sounding TTS) ─────────────────────

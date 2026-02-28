@@ -3,23 +3,36 @@
 The Orchestrator receives user messages, decides which specialist agent
 to invoke (or responds directly), and returns a unified reply.
 
+Architecture
+────────────
+The orchestrator operates in two modes:
+1.  **Bedrock mode** — When AWS credentials are available, uses AWS Bedrock
+    AgentCore for intent classification, session management, and the
+    closed-loop learning cycle (TEACH → ASSESS → FEEDBACK → TEACH).
+2.  **MiniMax mode** — Fallback that uses MiniMax-M2.5 directly for routing.
+
 Flow
 ────
 1.  Receive a user message + optional conversation history + topic.
-2.  Use MiniMax-M2.5 to decide: teach / assess / direct-reply.
-3.  Invoke TeachingAgent or AssessmentAgent as needed.
-4.  Return the combined response with agent attribution.
+2.  If Bedrock is available → delegate to BedrockOrchestrator.route()
+3.  Otherwise → use MiniMax-M2.5 to decide: teach / assess / direct-reply.
+4.  Invoke TeachingAgent or AssessmentAgent as needed.
+5.  Return the combined response with agent attribution + orchestration metadata.
 """
 
 from __future__ import annotations
 
 import json
+import logging
+import os
 import traceback
 from typing import Any, Dict, List, Optional
 
 import anthropic
 
-from config.config import MiniMaxConfig
+from config.config import MiniMaxConfig, AWSConfig
+
+logger = logging.getLogger(__name__)
 
 
 # ── helpers ──────────────────────────────────────────────────────────
@@ -89,18 +102,31 @@ You MUST respond with valid JSON:
 # ── OrchestratorAgent ────────────────────────────────────────────────
 
 class OrchestratorAgent:
-    """Coordinates user chat messages between Teaching and Assessment agents."""
+    """Coordinates user chat messages between Teaching and Assessment agents.
+
+    Uses AWS Bedrock AgentCore as the primary orchestration layer when available,
+    falling back to MiniMax-M2.5 for routing when Bedrock is not configured.
+    """
 
     def __init__(
         self,
         minimax_api_key: str,
         teaching_agent,
         assessment_agent,
+        bedrock_orchestrator=None,
     ):
         self.api_key = minimax_api_key or ""
         self.teaching_agent = teaching_agent
         self.assessment_agent = assessment_agent
 
+        # AWS Bedrock orchestration layer (primary)
+        self._bedrock = bedrock_orchestrator
+        self._bedrock_enabled = (
+            bedrock_orchestrator is not None
+            and os.getenv("AWS_BEDROCK_ENABLED", "false").lower() == "true"
+        )
+
+        # MiniMax client (fallback routing)
         self._client: Optional[anthropic.Anthropic] = None
         if self.api_key:
             self._client = anthropic.Anthropic(
@@ -110,6 +136,12 @@ class OrchestratorAgent:
             )
         self._model = MiniMaxConfig.MINIMAX_TEXT_MODEL
 
+        logger.info(
+            "OrchestratorAgent initialised — Bedrock: %s, MiniMax: %s",
+            "ENABLED" if self._bedrock_enabled else "DISABLED",
+            "READY" if self._client else "NOT CONFIGURED",
+        )
+
     # ── public API ───────────────────────────────────────────────────
 
     def chat(
@@ -117,6 +149,7 @@ class OrchestratorAgent:
         message: str,
         topic: str = "",
         history: Optional[List[Dict[str, str]]] = None,
+        session_id: str | None = None,
     ) -> Dict[str, Any]:
         """Process a user chat message and return a response.
 
@@ -128,31 +161,53 @@ class OrchestratorAgent:
             The current topic context (may be empty).
         history : list[dict]
             Previous messages in ``[{"role": "user"|"assistant", "content": ...}]`` format.
+        session_id : str | None
+            Optional session ID for Bedrock session continuity.
 
         Returns
         -------
-        dict with keys: ``reply``, ``agent_used``, ``extra`` (optional agent output).
+        dict with keys: ``reply``, ``agent_used``, ``extra`` (optional agent output),
+        and when Bedrock is active: ``session``, ``loop_state``, ``bedrock_classification``.
         """
+        history = history or []
+
+        # ── Primary path: AWS Bedrock AgentCore ──────────────────────
+        if self._bedrock_enabled and self._bedrock:
+            try:
+                result = self._bedrock.route(
+                    message=message,
+                    session_id=session_id,
+                    topic=topic,
+                    history=history,
+                )
+                logger.info(
+                    "Bedrock routed: intent=%s agent=%s session=%s",
+                    result.get("bedrock_classification", {}).get("intent"),
+                    result.get("agent_used"),
+                    result.get("session", {}).get("session_id"),
+                )
+                return result
+            except Exception as e:
+                logger.warning("Bedrock routing failed, falling back to MiniMax: %s", e)
+                # Fall through to MiniMax fallback
+
+        # ── Fallback: MiniMax-M2.5 routing ───────────────────────────
         if not self._client:
             return {
-                "reply": "No MiniMax API key configured. Set MINIMAX_API_KEY in your .env file.",
+                "reply": "No API key configured. Set MINIMAX_API_KEY in your .env file.",
                 "agent_used": "error",
             }
 
-        history = history or []
-
-        # ── Step 1: Ask the LLM to decide which agent to invoke ──────
+        # Step 1: Ask the LLM to decide which agent to invoke
         decision = self._decide(message, topic, history)
-
         action = decision.get("action", "direct")
 
-        # ── Step 2: Execute the decision ─────────────────────────────
+        # Step 2: Execute the decision
         if action == "teach":
             return self._handle_teach(decision, topic)
         elif action == "assess":
             return self._handle_assess(decision, topic)
         else:
-            # Direct reply from orchestrator
             return {
                 "reply": decision.get("reply", "I'm here to help with HKDSE Mathematics! Ask me anything."),
                 "agent_used": "orchestrator",
