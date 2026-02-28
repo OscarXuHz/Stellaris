@@ -2,3 +2,7 @@ eduloop/.enveduloop_NextJS/nextjs/.next/
 eduloop_NextJS/nextjs/node_modules/
 *.pack
 *.node
+eduloop_NextJS/nextjs/node_modules/
+eduloop_NextJS/nextjs/.next/
+*.pack
+*.node
