@@ -1,14 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Proxy /api/* to the FastAPI backend so no CORS issues in dev
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: "http://localhost:8000/api/:path*",
-      },
-    ];
-  },
+  // /api/* is handled by app/api/[...slug]/route.ts which proxies to FastAPI
+  // with a 120s timeout — needed for MiniMax-M2.5 extended thinking calls.
 };
 
 module.exports = nextConfig;

@@ -300,7 +300,7 @@ class TeachingAgent:
                 ],
             )
             return (
-                "".join(b.text for b in response.content if hasattr(b, "text"))
+                "".join(b.text for b in response.content if getattr(b, "type", None) == "text")
                 or raw_text
             )
         except Exception:

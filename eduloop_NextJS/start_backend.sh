@@ -1,10 +1,14 @@
 #!/bin/bash
-# Run from eduloop_NextJS/ — starts FastAPI backend without --reload
-# Usage: bash start_backend.sh
+# Starts FastAPI backend without --reload.
+# Can be run from ANY directory: bash /path/to/start_backend.sh
 
-set -e
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
+# Resolve the directory this script lives in, even if cwd is broken
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+if [ -z "$SCRIPT_DIR" ]; then
+  # Fallback: hardcoded absolute path
+  SCRIPT_DIR="/Users/jiahangx/Library/Mobile Documents/com~apple~CloudDocs/Activities and Registration/HTE/Stellaris/eduloop_NextJS"
+fi
+cd "$SCRIPT_DIR" || { echo "ERROR: cannot cd to $SCRIPT_DIR"; exit 1; }
 
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
