@@ -89,13 +89,16 @@ class FormatRequest(BaseModel):
 # ── Endpoints ──────────────────────────────────────────────────────────
 
 @app.get("/health")
-async def health():
+def health():
     return {"status": "ok", "rag_ready": rag is not None}
 
 
 @app.post("/api/teach")
-async def teach(req: TeachRequest):
-    """Generate a structured lesson for a given topic."""
+def teach(req: TeachRequest):
+    """Generate a structured lesson for a given topic.
+    Defined as sync def so FastAPI runs it in a thread pool — prevents
+    the blocking Anthropic SDK call from stalling the event loop.
+    """
     if teaching_agent is None:
         raise HTTPException(503, "Agents not yet initialised")
     try:
@@ -110,7 +113,7 @@ async def teach(req: TeachRequest):
 
 
 @app.get("/api/questions")
-async def get_questions(
+def get_questions(
     topic: str = Query(..., description="DSE topic"),
     n: int = Query(3, ge=1, le=10, description="Number of questions"),
 ):
@@ -128,7 +131,7 @@ async def get_questions(
 
 
 @app.post("/api/format-questions")
-async def format_questions(requests: list[FormatRequest]):
+def format_questions(requests: list[FormatRequest]):
     """Batch-format raw OCR question texts into clean LaTeX markdown via MiniMax."""
     if teaching_agent is None:
         raise HTTPException(503, "Agents not yet initialised")
@@ -140,7 +143,7 @@ async def format_questions(requests: list[FormatRequest]):
 
 
 @app.post("/api/assess")
-async def assess(req: AssessRequest):
+def assess(req: AssessRequest):
     """Evaluate a student's answer via MiniMax and return a diagnostic report."""
     if assessment_agent is None:
         raise HTTPException(503, "Agents not yet initialised")

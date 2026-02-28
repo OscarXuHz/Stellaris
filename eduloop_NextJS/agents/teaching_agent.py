@@ -69,6 +69,7 @@ class TeachingAgent:
             self._client = anthropic.Anthropic(
                 api_key=self.api_key,
                 base_url=MiniMaxConfig.MINIMAX_BASE_URL,
+                timeout=90.0,   # MiniMax-M2.5 extended thinking can take up to ~90s
             )
         self._model = MiniMaxConfig.MINIMAX_TEXT_MODEL  # e.g. "MiniMax-M2.5"
 
@@ -192,10 +193,10 @@ class TeachingAgent:
                 messages=[{"role": "user", "content": user_message}],
             )
 
-            # Extract text blocks from the response
+            # Extract only TextBlocks — skip ThinkingBlock / RedactedThinkingBlock
             reply_text = ""
             for block in response.content:
-                if hasattr(block, "text"):
+                if getattr(block, "type", None) == "text":
                     reply_text += block.text
 
             parsed = _safe_json_parse(reply_text)
