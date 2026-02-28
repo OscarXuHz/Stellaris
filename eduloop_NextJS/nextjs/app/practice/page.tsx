@@ -263,7 +263,7 @@ export default function PracticePage() {
                             {eval_.next_step_recommendation && (
                               <p className="text-xs text-gray-500">
                                 Next step: <strong>{eval_.next_step_recommendation.action}</strong>
-                                {" — "}focus on: {eval_.next_step_recommendation.focus_topics_for_teacher.join(", ")}
+                                {" — "}focus on: {(eval_.next_step_recommendation.focus_topics_for_teacher ?? eval_.next_step_recommendation.focus_topics ?? []).join(", ")}
                               </p>
                             )}
                           </>

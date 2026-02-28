@@ -49,7 +49,8 @@ export interface DiagnosticReport {
 
 export interface NextStepRecommendation {
   action: "advance" | "review" | "reteach_specifics";
-  focus_topics_for_teacher: string[];
+  focus_topics_for_teacher?: string[];
+  focus_topics?: string[];
 }
 
 export interface LlmAssessResponse {

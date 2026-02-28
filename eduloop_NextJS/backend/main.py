@@ -132,14 +132,33 @@ def get_questions(
 
 @app.post("/api/format-questions")
 def format_questions(requests: list[FormatRequest]):
-    """Batch-format raw OCR question texts into clean LaTeX markdown via MiniMax."""
+    """Batch-format raw OCR question texts into clean LaTeX markdown via MiniMax.
+
+    Questions are processed in parallel (ThreadPoolExecutor) to cut latency from
+    N × ~15s  →  ~15s total (wall-clock).
+    """
     if teaching_agent is None:
         raise HTTPException(503, "Agents not yet initialised")
-    formatted = []
-    for r in requests:
-        text = teaching_agent.format_question_latex(r.raw_text, r.topic)
-        formatted.append({"original": r.raw_text, "formatted": text})
-    return {"formatted": formatted}
+
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    import traceback as _tb
+
+    def _fmt(r: FormatRequest) -> dict:
+        try:
+            text = teaching_agent.format_question_latex(r.raw_text, r.topic)  # type: ignore[union-attr]
+        except Exception:
+            _tb.print_exc()
+            text = r.raw_text
+        return {"original": r.raw_text, "formatted": text}
+
+    # Run all formatting calls concurrently (max 6 threads)
+    with ThreadPoolExecutor(max_workers=min(len(requests), 6)) as pool:
+        futures = {pool.submit(_fmt, r): i for i, r in enumerate(requests)}
+        results: list[dict | None] = [None] * len(requests)
+        for fut in as_completed(futures):
+            results[futures[fut]] = fut.result()
+
+    return {"formatted": results}
 
 
 @app.post("/api/assess")

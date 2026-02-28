@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND = "http://localhost:8000";
 
-// 120s — enough for MiniMax-M2.5 extended thinking on /api/teach
-const TIMEOUT_MS = 120_000;
+// 150s — enough for MiniMax-M2.5 batch formatting (parallelised on backend)
+const TIMEOUT_MS = 150_000;
 
 async function proxy(req: NextRequest, slug: string[]): Promise<NextResponse> {
   // slug strips the /api/ prefix (that's the route directory), so re-add it
