@@ -1,6 +1,7 @@
 1. Project Overview 
 Project Name: EduLoop DSE Tagline: A Dual-Agent Mastery Learning Ecosystem for HKDSE.
 Overview: EduLoop is an AI-native education platform that transforms HKDSE preparation through a continuous feedback loop between two specialized agents. By integrating AWS Bedrock AgentCore for orchestration and MiniMaxfor creative multi-modal content, EduLoop simulates a 1-on-1 private tutor experience. The Teaching Agent delivers personalized modular lessons, while the Assessment Agent dynamically generates syllabus-aligned tests and diagnostic reports. The agents communicate autonomously to refine the learning path, ensuring students bridge knowledge gaps through data-driven, pedagogical reinforcement.
+Focus Tracks: MiniMax Creative Usage Award, RevisionDojo Future of Learning Award, Ingram Micro & AWS Agentic AI Champion
 
 一、 团队成员详细分工
 角色	核心职责	核心工具
