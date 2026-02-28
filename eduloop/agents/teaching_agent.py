@@ -264,6 +264,52 @@ class TeachingAgent:
             "rag_chunks_used": len(all_chunks),
         }
 
+    # ── question LaTeX formatter ─────────────────────────────────────
+
+    def format_question_latex(self, raw_text: str, topic: str) -> str:
+        """Send raw OCR question text to MiniMax for LaTeX cleanup.
+
+        Returns the same text with all mathematical expressions replaced
+        by proper LaTeX ($...$ inline and $$...$$ display).
+        Gracefully falls back to the original text on any error.
+        """
+        if not self._client or not raw_text.strip():
+            return raw_text
+
+        system = (
+            "You are a HKDSE Mathematics typesetter. "
+            "You receive raw OCR-extracted text from scanned past-paper PDFs. "
+            "Your ONLY tasks:\n"
+            "1. Clean OCR artefacts (misread characters, broken words, stray symbols).\n"
+            "2. Reformat ALL mathematical expressions in LaTeX:\n"
+            "   - Inline: $expression$\n"
+            "   - Display/block: $$expression$$\n"
+            "3. Preserve the original question wording and numbering exactly.\n"
+            "4. Return ONLY the cleaned markdown — no JSON, no explanation, no commentary.\n\n"
+            "LaTeX examples:\n"
+            "  Quadratic: $ax^2 + bx + c = 0$\n"
+            "  Solution: $$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$\n"
+            "  Fraction: $\\frac{3}{4}$, power: $x^n$, subscript: $x_1$\n"
+            "  Trig: $\\sin\\theta$, log: $\\log_a x$, abs: $|x|$\n"
+            "  Matrix: $$\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$$"
+        )
+
+        try:
+            response = self._client.messages.create(
+                model=self._model,
+                max_tokens=1024,
+                system=system,
+                messages=[
+                    {"role": "user", "content": f"Topic: {topic}\n\nRaw OCR text:\n\n{raw_text}"}
+                ],
+            )
+            return (
+                "".join(b.text for b in response.content if hasattr(b, "text"))
+                or raw_text
+            )
+        except Exception:
+            return raw_text
+
     # ── session helpers ──────────────────────────────────────────────
 
     def get_lesson_history(self) -> List[Dict[str, Any]]:
