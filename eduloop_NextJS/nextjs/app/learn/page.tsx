@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { BookOpen, Loader2, ChevronDown, ChevronUp, AlertCircle } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import {
+  BookOpen, Loader2, ChevronDown, ChevronUp, AlertCircle,
+  Volume2, Video, RefreshCw,
+} from "lucide-react";
 import MathContent from "@/components/MathContent";
-import { generateLesson } from "@/lib/api";
+import { generateLesson, generateTTS, paraphraseForTTS, createVideo, getVideoStatus } from "@/lib/api";
 import { SYLLABUSES, TOPICS, type Lesson, type ContentBlock } from "@/lib/types";
 import clsx from "clsx";
 
@@ -26,15 +29,38 @@ export default function LearnPage() {
   const [error, setError]       = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("📘 Lesson");
 
+  // ── Audio state ────────────────────────────────────────────────────
+  const [audioSrc, setAudioSrc]       = useState<string | null>(null);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  // ── Video state ────────────────────────────────────────────────────
+  const [videoUrl, setVideoUrl]       = useState<string | null>(null);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoStatus, setVideoStatus] = useState<string>("");
+  const videoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const topics = TOPICS[syllabus] ?? [];
+
+  // cleanup video polling on unmount
+  useEffect(() => {
+    return () => {
+      if (videoTimerRef.current) clearInterval(videoTimerRef.current);
+    };
+  }, []);
 
   async function handleGenerate() {
     setLoading(true);
     setError(null);
+    setAudioSrc(null);
+    setVideoUrl(null);
+    setVideoStatus("");
     try {
       const result = await generateLesson(topic, "intermediate", {});
       setLesson(result);
       setActiveTab("📘 Lesson");
+      // Auto-generate audio narration after lesson loads
+      autoNarrate(result);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
@@ -42,15 +68,103 @@ export default function LearnPage() {
     }
   }
 
+  // ── Auto-narrate: paraphrase + TTS ─────────────────────────────────
+  async function autoNarrate(lessonData: Lesson) {
+    setAudioLoading(true);
+    try {
+      const llm = lessonData.llm_response;
+      const rawContent = (llm.content_blocks ?? [])
+        .map((b) => `[${b.type}] ${b.text}`)
+        .join("\n\n");
+      const paraphrased = await paraphraseForTTS(rawContent, lessonData.topic, "lesson");
+      const { audio_hex } = await generateTTS(paraphrased.substring(0, 3000));
+      const bytes = new Uint8Array(audio_hex.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)));
+      const blob = new Blob([bytes], { type: "audio/mpeg" });
+      const url = URL.createObjectURL(blob);
+      setAudioSrc(url);
+      setTimeout(() => audioRef.current?.play(), 300);
+    } catch (e) {
+      console.error("Auto-narrate failed:", e);
+    } finally {
+      setAudioLoading(false);
+    }
+  }
+
+  // ── Generate audio narration (manual) ──────────────────────────────
+  const handleAudio = useCallback(async () => {
+    if (!lesson?.llm_response) return;
+    setAudioLoading(true);
+    try {
+      const llm = lesson.llm_response;
+      const rawContent = (llm.content_blocks ?? [])
+        .map((b) => `[${b.type}] ${b.text}`)
+        .join("\n\n");
+      const paraphrased = await paraphraseForTTS(rawContent, lesson.topic, "lesson");
+      const { audio_hex } = await generateTTS(paraphrased.substring(0, 3000));
+      const bytes = new Uint8Array(audio_hex.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)));
+      const blob = new Blob([bytes], { type: "audio/mpeg" });
+      const url = URL.createObjectURL(blob);
+      setAudioSrc(url);
+      setTimeout(() => audioRef.current?.play(), 100);
+    } catch (e) {
+      console.error("TTS failed:", e);
+      setError("Audio generation failed — check console for details.");
+    } finally {
+      setAudioLoading(false);
+    }
+  }, [lesson]);
+
+  // ── Generate instruction video ─────────────────────────────────────
+  const handleVideo = useCallback(async () => {
+    setVideoLoading(true);
+    setVideoStatus("Submitting…");
+    setVideoUrl(null);
+    try {
+      const prompt =
+        `A warm, professional math teacher sitting at a desk, directly facing the camera in a medium close-up shot. ` +
+        `The teacher speaks to the viewer about "${topic}" with natural hand gestures, ` +
+        `maintaining steady eye contact. Soft studio lighting, modern minimalist classroom background, ` +
+        `shallow depth of field. The teacher smiles and nods encouragingly. Cinematic, 4K quality.`;
+
+      const { task_id } = await createVideo(prompt);
+      setVideoStatus("Processing (this may take a few minutes)…");
+
+      if (videoTimerRef.current) clearInterval(videoTimerRef.current);
+      videoTimerRef.current = setInterval(async () => {
+        try {
+          const st = await getVideoStatus(task_id);
+          if (st.status === "Success" && st.download_url) {
+            setVideoUrl(st.download_url);
+            setVideoStatus("Ready!");
+            setVideoLoading(false);
+            if (videoTimerRef.current) clearInterval(videoTimerRef.current);
+          } else if (st.status === "Fail") {
+            setVideoStatus("Video generation failed.");
+            setVideoLoading(false);
+            if (videoTimerRef.current) clearInterval(videoTimerRef.current);
+          } else {
+            setVideoStatus(`Processing… (status: ${st.status})`);
+          }
+        } catch {
+          // keep polling
+        }
+      }, 10_000);
+    } catch (e) {
+      console.error("Video generation failed:", e);
+      setVideoStatus("Failed to start video generation.");
+      setVideoLoading(false);
+    }
+  }, [topic]);
+
   const llm = lesson?.llm_response;
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">📖 Learn with Your Personal Tutor</h1>
+      <h1 className="text-2xl font-bold text-gray-900 animate-fade-in">📖 Learn with Your Personal Tutor</h1>
 
       <div className="grid grid-cols-[260px_1fr] gap-6 items-start">
         {/* ── Left panel ─────────────────────────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 sticky top-0">
+        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 sticky top-0 animate-fade-in-left">
           <h2 className="font-semibold text-gray-700 text-sm uppercase tracking-wide">Select Topic</h2>
 
           <div className="space-y-1">
@@ -92,10 +206,69 @@ export default function LearnPage() {
               {lesson.rag_chunks_used} RAG chunks · {lesson.dse_references.length} sources
             </p>
           )}
+
+          {/* ── Media buttons ─────────────────────────────────────── */}
+          {lesson && (
+            <div className="border-t border-gray-100 pt-4 space-y-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">AI Media</p>
+
+              <button
+                onClick={handleAudio}
+                disabled={audioLoading}
+                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
+              >
+                {audioLoading ? <Loader2 size={14} className="animate-spin" /> : <Volume2 size={14} />}
+                {audioLoading ? "Generating…" : "🔊 Audio Narration"}
+              </button>
+
+              <button
+                onClick={handleVideo}
+                disabled={videoLoading}
+                className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
+              >
+                {videoLoading ? <Loader2 size={14} className="animate-spin" /> : <Video size={14} />}
+                {videoLoading ? "Generating…" : "🎬 Video Instruction"}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ── Right panel ────────────────────────────────────────────────── */}
         <div className="space-y-4">
+          {/* ── Audio player ─────────────────────────────────────────── */}
+          {audioSrc && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2 animate-scale-in">
+              <p className="text-sm font-semibold text-indigo-800">🔊 Audio Narration</p>
+              <audio ref={audioRef} controls src={audioSrc} className="w-full" />
+            </div>
+          )}
+          {audioLoading && !audioSrc && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 animate-fade-in">
+              <div className="flex items-center gap-2 text-sm text-indigo-600">
+                <Loader2 size={14} className="animate-spin" />
+                Preparing personalised audio narration…
+              </div>
+              <div className="mt-2 h-2 rounded-full overflow-hidden bg-indigo-100">
+                <div className="h-full bg-gradient-to-r from-indigo-400 via-blue-400 to-indigo-400 animate-gradient-x rounded-full" />
+              </div>
+            </div>
+          )}
+
+          {/* ── Video player ─────────────────────────────────────────── */}
+          {(videoUrl || videoStatus) && (
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 space-y-2 animate-scale-in">
+              <p className="text-sm font-semibold text-purple-800">🎬 Video Instruction</p>
+              {videoUrl ? (
+                <video controls className="w-full rounded-lg" src={videoUrl} />
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-purple-600">
+                  <RefreshCw size={14} className="animate-spin" />
+                  {videoStatus}
+                </div>
+              )}
+            </div>
+          )}
+
           {error && (
             <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
               <AlertCircle size={16} className="mt-0.5 shrink-0" />
@@ -104,16 +277,27 @@ export default function LearnPage() {
           )}
 
           {!lesson && !loading && (
-            <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center text-gray-400">
+            <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center text-gray-400 animate-fade-in">
               <BookOpen size={40} className="mx-auto mb-3 opacity-30" />
               <p>Select a topic and click <strong>Generate Lesson</strong></p>
+            </div>
+          )}
+
+          {loading && (
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center animate-fade-in">
+              <Loader2 size={40} className="mx-auto mb-4 text-blue-500 animate-spin" />
+              <p className="text-gray-600 font-medium">Generating your personalised lesson…</p>
+              <p className="text-gray-400 text-sm mt-1">This may take up to a minute</p>
+              <div className="mt-4 mx-auto w-64 h-2 rounded-full overflow-hidden bg-gray-100">
+                <div className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 animate-gradient-x rounded-full" />
+              </div>
             </div>
           )}
 
           {lesson && (
             <>
               {/* Topic header */}
-              <div className="bg-white rounded-xl border border-gray-200 px-5 py-4">
+              <div className="bg-white rounded-xl border border-gray-200 px-5 py-4 animate-fade-in">
                 <p className="text-xs text-gray-400 uppercase tracking-wide">{syllabus}</p>
                 <h2 className="text-xl font-bold text-gray-900">{lesson.topic}</h2>
               </div>
@@ -126,7 +310,7 @@ export default function LearnPage() {
               )}
 
               {/* Tabs */}
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-scale-in">
                 <div className="flex border-b border-gray-100 overflow-x-auto">
                   {TABS.map((tab) => (
                     <button

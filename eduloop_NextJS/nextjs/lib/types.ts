@@ -31,6 +31,8 @@ export interface RagChunk {
   text: string;
   source: string;
   score: number;
+  /** Separated answer/solution (extracted by LLM from OCR text). */
+  answer?: string;
   metadata: {
     year?: string;
     paper?: string;
@@ -77,6 +79,19 @@ export interface StudentProfile {
   level: "Foundational" | "Intermediate" | "Advanced";
   learning_style: "Visual" | "Auditory" | "Mixed";
   language: "English" | "Cantonese (粵語)" | "Mixed";
+}
+
+// ── Chat / Orchestrator types ──────────────────────────────────────────
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  agent_used?: "orchestrator" | "teaching" | "assessment" | "error";
+}
+
+export interface ChatResponse {
+  reply: string;
+  agent_used: "orchestrator" | "teaching" | "assessment" | "error";
+  extra?: Record<string, unknown>;
 }
 
 // ── DSE syllabus / topic constants ─────────────────────────────────────

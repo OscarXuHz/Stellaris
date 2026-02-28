@@ -267,44 +267,67 @@ class TeachingAgent:
 
     # ── question LaTeX formatter ──────────────────────────────────────────────
 
-    def format_question_latex(self, raw_text: str, topic: str) -> str:
-        """Send raw OCR question text to MiniMax for LaTeX cleanup."""
+    def format_question_latex(self, raw_text: str, topic: str) -> dict:
+        """Send raw OCR question text to MiniMax for LaTeX cleanup.
+
+        Returns ``{"question": ..., "answer": ...}`` where *answer* may be
+        empty if no answer/solution is embedded in the OCR text.
+        """
+        fallback = {"question": raw_text, "answer": ""}
         if not self._client or not raw_text.strip():
-            return raw_text
+            return fallback
 
         system = (
             "You are a HKDSE Mathematics typesetter. "
-            "You receive raw OCR-extracted text from scanned past-paper PDFs. "
-            "Your ONLY tasks:\n"
-            "1. Clean OCR artefacts (misread characters, broken words, stray symbols).\n"
-            "2. Reformat ALL mathematical expressions in LaTeX:\n"
-            "   - Inline: $expression$\n"
-            "   - Display/block: $$expression$$\n"
-            "3. Preserve the original question wording and numbering exactly.\n"
-            "4. Return ONLY the cleaned markdown — no JSON, no explanation, no commentary.\n\n"
-            "LaTeX examples:\n"
-            "  Quadratic: $ax^2 + bx + c = 0$\n"
-            "  Solution: $$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$\n"
-            "  Fraction: $\\frac{3}{4}$, power: $x^n$, subscript: $x_1$\n"
-            "  Trig: $\\sin\\theta$, log: $\\log_a x$, abs: $|x|$\n"
-            "  Matrix: $$\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$$"
+            "You receive raw OCR-extracted text from scanned past-paper PDFs.\n\n"
+            "Your tasks:\n"
+            "1. Clean ALL OCR artefacts (misread characters, broken ligatures, "
+            "stray symbols, garbled Unicode).\n"
+            "2. Convert EVERY mathematical expression — no matter how simple — "
+            "into LaTeX:\n"
+            "   • Inline: $expression$   (variables, numbers with operators, "
+            "small fractions)\n"
+            "   • Display/block: $$expression$$   (equations, formulas, "
+            "solutions)\n"
+            "   Even single variables like x or constants like 3 that appear "
+            "in a mathematical context MUST be wrapped in $...$.\n"
+            "3. If the OCR text contains an answer, solution, or correct "
+            "option (e.g. 'A', 'x = 2'), separate it out.\n"
+            "4. Preserve original question wording and numbering exactly.\n\n"
+            "Return ONLY a JSON object with two keys:\n"
+            '  {"question": "<cleaned question in markdown+LaTeX>", '
+            '"answer": "<answer/solution or empty string>"}\n\n'
+            "LaTeX reference:\n"
+            "  $ax^2 + bx + c = 0$, $$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$\n"
+            "  $\\frac{3}{4}$, $x^n$, $x_1$, $\\sin\\theta$, $\\log_a x$, $|x|$\n"
+            "  $$\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$$\n\n"
+            "IMPORTANT: Wrap ALL math in LaTeX — even simple items like "
+            "'x = 2' → '$x = 2$'. Never leave bare math."
         )
 
         try:
             response = self._client.messages.create(
                 model=self._model,
-                max_tokens=1024,
+                max_tokens=2048,
                 system=system,
                 messages=[
                     {"role": "user", "content": f"Topic: {topic}\n\nRaw OCR text:\n\n{raw_text}"}
                 ],
             )
-            return (
-                "".join(b.text for b in response.content if getattr(b, "type", None) == "text")
-                or raw_text
+            reply = "".join(
+                b.text for b in response.content
+                if getattr(b, "type", None) == "text"
             )
+            parsed = _safe_json_parse(reply)
+            if parsed and "question" in parsed:
+                return {
+                    "question": parsed["question"],
+                    "answer": parsed.get("answer", ""),
+                }
+            # LLM didn't return JSON — treat entire reply as the question
+            return {"question": reply or raw_text, "answer": ""}
         except Exception:
-            return raw_text
+            return fallback
 
     # ── session helpers ──────────────────────────────────────────────
 

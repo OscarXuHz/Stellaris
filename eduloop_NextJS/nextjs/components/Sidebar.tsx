@@ -9,6 +9,7 @@ import {
   BarChart2,
   Settings,
   GraduationCap,
+  MessageCircle,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -16,6 +17,7 @@ const NAV = [
   { href: "/",         label: "Dashboard", icon: LayoutDashboard },
   { href: "/learn",    label: "Learn",     icon: BookOpen },
   { href: "/practice", label: "Practice",  icon: PenLine },
+  { href: "/chat",     label: "Chat",      icon: MessageCircle },
   { href: "/progress", label: "Progress",  icon: BarChart2 },
   { href: "/settings", label: "Settings",  icon: Settings },
 ];
@@ -26,8 +28,8 @@ export default function Sidebar() {
     <aside className="w-60 shrink-0 bg-white border-r border-gray-200 flex flex-col">
       {/* Logo */}
       <div className="px-5 py-5 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="bg-blue-600 text-white rounded-lg p-1.5">
+        <div className="flex items-center gap-3 group">
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-lg p-1.5 group-hover:scale-110 transition-transform duration-300">
             <GraduationCap size={20} />
           </div>
           <div>

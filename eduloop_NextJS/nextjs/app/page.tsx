@@ -25,19 +25,19 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
+      <div className="animate-fade-in">
         <h1 className="text-2xl font-bold text-gray-900">📚 EduLoop DSE</h1>
         <p className="text-gray-500 mt-1">Your AI-powered HKDSE Mathematics tutor</p>
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-4 stagger-children">
         {[
           { label: "Lessons Completed", value: "0", delta: "Start learning!", icon: BookOpen, color: "blue" },
           { label: "Average Score",     value: "—",  delta: "No assessments yet", icon: Award, color: "green" },
           { label: "Study Streak",      value: "1",  delta: "Keep going!",        icon: TrendingUp, color: "purple" },
         ].map(({ label, value, delta, icon: Icon, color }) => (
-          <div key={label} className="bg-white rounded-xl border border-gray-200 p-5">
+          <div key={label} className="bg-white rounded-xl border border-gray-200 p-5 animate-scale-in hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
             <div className={`inline-flex p-2 rounded-lg bg-${color}-50 mb-3`}>
               <Icon size={18} className={`text-${color}-600`} />
             </div>
@@ -50,7 +50,7 @@ export default function Dashboard() {
 
       {/* Charts */}
       <div className="grid grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 p-5 animate-fade-in-left hover:shadow-lg transition-shadow duration-300">
           <h2 className="font-semibold text-gray-800 mb-4">📊 Mastery by Topic</h2>
           <ResponsiveContainer width="100%" height={260}>
             <RadarChart data={radarData}>
@@ -61,7 +61,7 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 p-5 animate-fade-in-right hover:shadow-lg transition-shadow duration-300">
           <h2 className="font-semibold text-gray-800 mb-4">📈 Performance by Topic</h2>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={radarData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
@@ -79,7 +79,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-4">
         <Link
           href="/learn"
-          className="flex items-center gap-4 bg-blue-600 hover:bg-blue-700 transition-colors text-white rounded-xl p-5"
+          className="flex items-center gap-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 text-white rounded-xl p-5 animate-fade-in-left hover:shadow-lg hover:scale-[1.02]"
         >
           <BookOpen size={24} />
           <div>
@@ -89,7 +89,7 @@ export default function Dashboard() {
         </Link>
         <Link
           href="/practice"
-          className="flex items-center gap-4 bg-white hover:bg-gray-50 transition-colors border border-gray-200 rounded-xl p-5"
+          className="flex items-center gap-4 bg-white hover:bg-gray-50 transition-all duration-300 border border-gray-200 rounded-xl p-5 animate-fade-in-right hover:shadow-lg hover:scale-[1.02]"
         >
           <PenLine size={24} className="text-gray-600" />
           <div>
@@ -100,7 +100,7 @@ export default function Dashboard() {
       </div>
 
       {/* Recent activity */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-fade-in">
         <div className="px-5 py-4 border-b border-gray-100">
           <h2 className="font-semibold text-gray-800">📅 Recent Activity</h2>
         </div>

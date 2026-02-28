@@ -1,0 +1,167 @@
+1. Project Overview 
+Project Name: EduLoop DSE Tagline: A Dual-Agent Mastery Learning Ecosystem for HKDSE.
+Overview: EduLoop is an AI-native education platform that transforms HKDSE preparation through a continuous feedback loop between two specialized agents. By integrating AWS Bedrock AgentCore for orchestration and MiniMaxfor creative multi-modal content, EduLoop simulates a 1-on-1 private tutor experience. The Teaching Agent delivers personalized modular lessons, while the Assessment Agent dynamically generates syllabus-aligned tests and diagnostic reports. The agents communicate autonomously to refine the learning path, ensuring students bridge knowledge gaps through data-driven, pedagogical reinforcement.
+
+一、 团队成员详细分工
+角色	核心职责	核心工具
+成员 A: 系统架构师 (The Orchestrator)	负责 AWS Bedrock AgentCore 的编排。设计两个 Agent 之间的“握手”协议（JSON 格式）、管理 Session 状态流转，确保“学习循环”不断裂。	AWS Bedrock, Boto3, Python, Cursor
+成员 B: 教学专家 (Teaching Specialist)	负责 MiniMax API 的集成与多模态输出。编写教学 Prompt，注入 DSE 知识库（RAG），开发音频生成模块（粤语/英语教学）。	MiniMax API, LangChain/LlamaIndex, Python
+成员 C: 评估与前端 (Assessment & UI)	负责 Assessment Agent 的出题逻辑、自动评分算法（根据 DSE Marking Scheme）以及 Streamlit 前端界面的交互与可视化。	Streamlit, Pandas/Plotly, Python
+导出到 Google 表格
+ 
+二、 8 小时极速开发时间线
+前提条件： 所有人已配置好 Python 环境、AWS 凭证和 MiniMax API Key。
+•	第 1 小时：定义协议与初始化 (The Blueprint)
+o	集体任务： 使用 AI Agent 生成两个 Agent 交换数据的标准 JSON 格式（例如：teaching_output.json, assessment_report.json）。
+o	A: 初始化 AWS Bedrock Agent 环境。
+o	B/C: 分头设计 Teaching 和 Assessment 的 System Prompts。
+•	第 2-3 小时：双代理核心构建 (Core Building)
+o	A: 使用 AI 辅助编写 LoopManager 类，处理状态机逻辑（Teaching -> Assessment -> Report -> Teaching）。
+o	B: 集成 MiniMax。让 AI 编写一个 Teacher 类，能根据知识点生成带有 DSE 考点风格的文本，并调用 MiniMax TTS 生成语音。
+o	C: 让 AI 编写 Examiner 类，能解析教学内容并生成 3-5 道针对性练习题。
+•	第 4 小时：数据闭环联调 (The Handshake)
+o	关键点： 这是项目最难的部分。
+o	A & B & C: 联调。确保 Assessment Agent 的错误分析（如：“学生在‘不等式符号翻转’上存在误区”）能精准传回给 Teaching Agent。
+o	工具： 使用 AI 编写单元测试，模拟报告传递。
+•	第 5-6 小时：UI 交互与可视化 (The Facade)
+o	C: 快速搭建 Streamlit 页面。要求 AI 生成侧边栏进度、聊天窗口和雷达图（显示 DSE 各维度掌握情况）。
+o	B: 接入 DSE 历年真题 PDF 到 RAG（向量数据库）。让 AI 辅助写一个简单的 PDFParser。
+•	第 7 小时：多模态创意与本地化 (HK Flavor)
+o	B: 调试 MiniMax 语音。确保 AI 导师的声音亲切，使用 DSE 术语（如 "Paper 1", "Level 5**", "Syllabus"）。
+o	A: 优化 AWS 响应速度，添加日志监控。
+•	第 8 小时：Bug 修复与 Demo 录制 (Final Polish)
+o	全员： 进行“端到端”测试。让 AI 辅助生成一段模拟 DSE 学生从“不会线性代数”到“掌握重点”的完整对话流脚本，作为 Demo。
+
+ 
+好的，为了让评委一眼看清你们项目的技术深度和代理间协作（Agentic Workflow）的逻辑，我为你梳理了 EduLoop DSE 的技术架构图。
+
+这张架构图突出了 AWS Bedrock 的编排能力、MiniMax 的多模态输出以及你们核心的循环学习逻辑（Closed-loop Learning）。
+
+架构详细说明：
+
+1. 展示层 (Presentation Layer - Streamlit)
+
+用户界面：简洁的 DSE 学习仪表盘。
+
+交互逻辑：输入学习目标 -> 查看教学内容 -> 进行实时测试 -> 查看多维诊断报告。
+
+多模态展现：集成 MiniMax 生成的语音讲解或视觉化知识卡片。
+
+2. 编排层 (Orchestration Layer - AWS Bedrock AgentCore)
+
+核心大脑：使用 AWS Bedrock 控制两个 Agent 的切换逻辑和状态流转。
+
+会话管理：负责存储 User 与 Agents 之间的对话历史，确保上下文连贯。
+
+逻辑路由：判断当前该由 Teaching Agent 授课，还是该由 Assessment Agent 出题。
+
+3. 智能代理层 (Agent Intelligence Layer)
+
+Teaching Agent (教学代理)：
+
+底层模型：MiniMax (利用其创意生成能力) + Bedrock LLM。
+
+职责：知识点拆解、案例说明、生成富有感染力的粤语/英语语音教学。
+
+Assessment Agent (评估代理)：
+
+底层模型：AWS Bedrock (利用其严谨的推理能力)。
+
+职责：根据 DSE 评分准则 (Marking Scheme) 出题、批改、生成包含“巩固建议”的 JSON 报告。
+
+4. 数据与工具层 (Data & Tools Layer)
+
+知识库 (RAG)：注入 HKDSE 官方考纲、历年真题 (Past Paper) 和标准答案。
+
+外部工具 (Tools/Plugins)：
+
+MiniMax API：用于生成创意音频或特定风格的文本。
+
+诊断引擎：基于 Python 逻辑计算学生的掌握程度分布（如：雷达图数据）。
+
+循环逻辑流 (The Loop Flow)：
+
+Input: 用户请求学习“线性代数”。
+
+Teach: Teaching Agent 调用知识库生成模块化内容 -> MiniMax 转化为语音/短文。
+
+Forward: AWS 编排器将教学内容元数据传递给 Assessment Agent。
+
+Assess: Assessment Agent 针对刚讲的知识点即时出题。
+
+Feedback: 学生回答 -> 评估结果生成报告 -> 回传 (Forward) 给 Teaching Agent。
+
+Refine: Teaching Agent 针对报告中的“薄弱点”重新调整策略，开始下一轮强化教学。
+
+建议：在 Pitching（演示）时，重点展示这个架构图中 "Forwarding Feedback" 的箭头，并强调这是通过 AWS Bedrock AgentCore 自动完成的，这最能体现你们的 Technical Execution。
+
+
+将学习科学（Learning Science）融入 AI Agent 的架构，能让你们的 EduLoop DSE 从一个单纯的“聊天机器人”升华为一个专业的“智能教育系统”。这不仅能显著提升学生的学习效率，更是 RevisionDojo (Future of Learning Award) 奖项最看重的加分项。
+
+以下是 4 个可以完美融入你们“双 Agent 闭环”体系的学习科学理论及其具体实现方案：
+
+1. 间隔重复与遗忘曲线 (Spaced Repetition & Forgetting Curve)
+
+理论核心：根据艾宾浩斯遗忘曲线，人类在学习后会迅速遗忘，但在特定的时间点进行复习，可以显著强化长时记忆。
+
+体系融入方案：
+
+Assessment Agent (记录者)：在评估结束后，不仅生成报告，还要将每个知识点的“掌握时间”和“熟练度”存入数据库。
+
+System Scheduler (调度器)：在用户下一次登录时，系统自动调用 Teaching Agent 弹出一个“5分钟回顾模块”，专门讲解 1天前、3天前或 7天前掌握不牢的旧知识点。
+
+价值：变“一次性学习”为“长效记忆管理”。
+
+2. 支架式教学 (Scaffolding / Zone of Proximal Development)
+
+理论核心：维果茨基提出，教学应着眼于学生的“最近发展区（ZPD）”。即学生在他人辅助下能达到的最高水平。系统应像“脚手架”一样，在学生遇到困难时给予适度引导，随着能力提升逐渐撤去辅助。
+
+体系融入方案：
+
+Assessment Agent (诊断)：当学生做错题时，不要直接给答案。
+
+Teaching Agent (引导)：收到错误信号后，TA 先给出一个“线索（Hint）”或“简化版案例”。
+
+循环逻辑：如果学生在 Hint 引导下做对了，评估 Agent 给予“潜力加分”；如果还是错，再进行深度讲解。这能锻炼学生的思考能力而非依赖性。
+
+价值：模拟真人名师“点拨”而非“填鸭”。
+
+3. 主动回想与测试效应 (Active Recall & Testing Effect)
+
+理论核心：通过“检索”信息（即考试或自测）来学习，比单纯的“阅读/听讲”更有效。测试不仅是评估工具，更是学习工具。
+
+体系融入方案：
+
+Teaching Agent (互动式教学)：在教学过程中，TA 不再是一次性输出 1000 字。它每讲完一个子知识点，就暂停并要求用户“用自己的话总结一下刚才的重点”。
+
+Assessment Agent (即时验证)：AA 立即对这段总结进行语义匹配。如果总结到位，才进入下一个环节。
+
+价值：强制学生处于“主动思考”状态，防止“幻觉式学习”（即觉得自己看懂了，其实没记住）。
+
+4. 双重编码理论 (Dual Coding Theory)
+
+理论核心：大脑同时处理语言（Verbal）和非语言（Visual/Audio）信息时，记忆效果最好。这正符合你们使用 MiniMax 多模态 奖项的要求。
+
+体系融入方案：
+
+Teaching Agent (多模态输出)：当讲解一个 DSE 物理或数学公式时，TA 同时输出：
+
+文本讲解：逻辑推导。
+
+MiniMax 语音：用亲切的语气解释生活化案例（Verbal）。
+
+结构化 Markdown 表格或 Mermaid 图表：展示逻辑流向（Visual）。
+
+价值：通过多感官刺激，帮助学生建立更深刻的认知联系。
+
+总结：如何在 8 小时内体现这些理论？
+
+你们不需要实现完美的算法，但要在 Prompt 设计 和 数据流转 中体现这些思维：
+
+在 Prompt 中设定身份：例如给 Teaching Agent 的 System Prompt 加入：“你是一个遵循 Scaffolding（支架式教学） 原则的导师，当学生回答错误时，优先提供引导而非答案。”
+
+在数据库中增加维度：除了分数，增加一个 next_review_at（下次复习时间）字段。
+
+在 Demo 演示中强调：向评委展示：“看，我们的 Agent 并没有直接给答案，而是根据 ZPD 理论 给出了线索，这正是我们对未来学习模式的思考。”
+
+这四个理论的加入，能瞬间把你们的商业故事（Business Story）从“开发一个 AI 工具”提升到“打造一个基于科学的学习引擎”。你们觉得哪一个理论在 DSE 的具体科目（比如数学）中最好展示？
