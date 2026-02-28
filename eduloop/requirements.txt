@@ -1,4 +1,3 @@
-"""Requirements file for EduLoop project."""
 
 # Core dependencies
 python-dotenv==1.0.0
