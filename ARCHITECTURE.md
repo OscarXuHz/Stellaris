@@ -281,8 +281,3 @@
                     └──────────────────┘
                        (Loop continues)
 ```
-
----
-
-**Architecture designed for 8-hour sprint implementation**  
-**Scalable, modular, and aligned with HackTheEast requirements**
