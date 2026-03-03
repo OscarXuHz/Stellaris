@@ -2,7 +2,6 @@
   <img src="https://img.shields.io/badge/AWS-Bedrock%20AgentCore-FF9900?style=for-the-badge&logo=amazonaws" />
   <img src="https://img.shields.io/badge/MiniMax-Multi--Modal%20AI-6C5CE7?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/Streamlit-Frontend-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" />
 </p>
 
 <h1 align="center">EduLoop DSE</h1>
@@ -364,3 +363,4 @@ Because every agent runs as an **independent AWS Bedrock AgentCore Runtime**, we
 
 
 MIT License — Built with ❤️ in Hong Kong for HKDSE students everywhere.
+
